@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://softmatter.local/bridge/kb_external_entry.schema.json",
+  "title": "Frontmatter of an imported KB entry",
+  "description": "Lands at kb/external/bd/<id>.md (AM side) or knowledge/external/am/<id>.md (BD side). Path carries the foreign origin so a citation is self-describing; a frontmatter field alone is not enough, because AM plans cite by path.",
+  "type": "object",
+  "required": ["id", "origin", "source_ref", "source_hash", "evidence_class",
+               "may_be_gate_threshold", "thread", "imported", "superseded_by", "confirmed_by"],
+  "additionalProperties": false,
+  "properties": {
+    "id":     { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
+    "origin": { "$ref": "common.defs.json#/$defs/repo" },
+
+    "source_ref":  { "type": "string", "pattern": "^(am|bd):[^\\s]+$" },
+    "source_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{8,64}$",
+                     "description": "Checked by the importing repo's own check CLI. Upstream drift flags every plan citing this entry." },
+
+    "evidence_class": {
+      "enum": ["measured", "simulated", "computed", "assumed", "round_trip"],
+      "description": "Surfaced at citation time. A simulated f_c must never sit in kb/calibrations/, which means 'measured on this instrument'."
+    },
+
+    "may_be_gate_threshold": {
+      "type": "boolean",
+      "description": "false for everything imported by default. A gate that clears against a simulated threshold emits a margin that looks measured -- the disease AM hard rule 3 already names."
+    },
+
+    "derived_from": { "type": "array", "items": { "$ref": "common.defs.json#/$defs/ref" } },
+    "thread":       { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*/r[0-9]+$" },
+    "imported":     { "type": "string", "format": "date" },
+
+    "supersedes":    { "type": ["string", "null"] },
+    "superseded_by": { "type": ["string", "null"],
+                       "description": "Lifecycle is supersession, not deletion. A deleted import dangles every decision that cited it." },
+    "corrected_by":  { "type": ["string", "null"] },
+    "confirmed_by":  { "$ref": "common.defs.json#/$defs/confirmed_by" }
+  }
+}

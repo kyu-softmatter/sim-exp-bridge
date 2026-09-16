@@ -1,0 +1,209 @@
+{
+  "schema": "softmatter.ask_experiment/0.1",
+  "direction": "simulation_to_experiment",
+  "origin": "bd",
+  "thread": { "id": "trap-stiffness-recovery", "round": 2, "reply_to": "../r1/ask_simulation.json" },
+  "status": "answered_with_gaps",
+
+  "run_ref": {
+    "ref": "bd:runs/trap-2d-5um__a5ef4f45d589",
+    "field": "metrics.json",
+    "hash": "sha256:09913b52a633d7f9",
+    "note": "Verdict PASS. Not a re-run for this ask: the archived production run is at a regime that brackets AM's, which is stated as such in `regime`."
+  },
+
+  "claim": "For a single-height overdamped harmonic trap in a Newtonian solvent, f_c is recoverable from a finite Brownian trajectory to +1.17 % against a 5 % tolerance at T_obs/tau_k = 2000 with 10 samples per tau_k. Therefore gamma_corr at ONE rung of the ladder is recoverable to that precision from a sufficiently long block, and the per-rung input error of the h0 fit is set by acquisition length, sampling rate and localisation noise -- not by the fit.",
+
+  "answering_quantity": {
+    "symbol": "f_c",
+    "unit": "Hz",
+    "why": "NOT the quantity asked for. h0 is unreachable here -- see `gaps`. f_c is the largest sub-question this case can close honestly: it is what sets gamma_corr per rung, and it is the one the archived run actually validated against a closed-form OU solution."
+  },
+
+  "achieved_precision": {
+    "value": 1.17,
+    "unit": "percent",
+    "basis": "metrics.json observables[] 'f_c (PSD fit)': measured 40.1516 Hz vs predicted 39.6871 Hz, err_pct +1.1705, tol_pct 5.0. The other four observables of the same run agree to better than 0.35 %.",
+    "set_by": "bd"
+  },
+
+  "requirements": [
+    { "symbol": "T_obs_per_rung", "min": 32.3, "unit": "s", "hard": false,
+      "basis_group": "T_obs/tau_k",
+      "from": "tau_k = 16.14 ms at your reference rung (derived below, using your declared Faxen factor). T_obs/tau_k = 2000 is the configuration at which this case actually reached f_c to 1.17 %, so 2000 x 16.14 ms = 32.3 s. Your envelope's 5 s gives T_obs/tau_k = 310: that clears this repository's soft floor of 100 (metrics.json checks, non-hard) with margin 3.1, but it is 6.4x below the configuration the 1.17 % was measured at. Nothing here says 310 fails -- it says the 1.17 % does not transfer to it, and no run in this repository has measured what does.",
+      "basis_refs": [ { "ref": "bd:runs/trap-2d-5um__a5ef4f45d589", "field": "dimensionless.T_obs/tau_k", "hash": "sha256:09913b52a633d7f9" } ] },
+
+    { "symbol": "f_s", "min": 620, "unit": "Hz", "hard": false,
+      "basis_group": "samples_per_tau_k",
+      "from": "This repository samples at tau_k/10, i.e. f_s = 10/tau_k = 620 Hz at tau_k = 16.14 ms. Your envelope caps f_s at 520 Hz (hard), which is 8.39 samples per tau_k -- 16 % short of the convention, not of a physical limit. Two ways out, both yours to choose: shrink the ROI height (it is what sets your frame rate) or accept 8.39 and treat the Lorentzian corner fit as unvalidated at that sampling. See findings[0]: your own gate asks for f_s >= 10 f_c = 99 Hz, which is 6.28x looser than this because the two conventions differ by 2*pi.",
+      "basis_refs": [ { "ref": "bd:intake/trap-2d-5um/system.yaml", "field": "numerics.samples_per_tau", "hash": "sha256:878915718bb9b548" } ] },
+
+    { "symbol": "epsilon_localisation", "max": 7.6, "unit": "nm", "hard": true,
+      "from": "Localisation noise adds in quadrature to the thermal amplitude, so it inflates var(x) by (epsilon/l_k)^2 and deflates the equipartition alpha by the same fraction. l_k = 33.98 nm at your k_t, so a 5 % budget needs epsilon <= 0.2236 l_k = 7.6 nm. Your assumed 10 nm is 0.294 l_k: 8.7 % on var(x) and ~8 % on alpha, which consumes the entire 5 % before the ladder fit starts. This is hard because it does not average away -- it is a bias, not a variance.",
+      "basis_refs": [] },
+
+    { "symbol": "sigma_gamma_per_rung", "max": 3.0, "unit": "percent", "hard": false,
+      "from": "Passed through unchanged from your own 400-realisation estimate, NOT independently derived here -- this case has one height and no ladder. Recorded as a requirement so it is visible, and as gaps[2] so it is not read as verified.",
+      "basis_refs": [ { "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md", "field": "Analysis.wall_fit", "hash": "sha256:58cfc405231a2970" } ] }
+  ],
+
+  "regime": [
+    { "name": "k*", "value": 60358.1, "expr": "k d^2/kT", "meaning": "trap vs thermal energy",
+      "counterpart": 21221.0, "tolerance": "within x3",
+      "why_this_tolerance": "f_c does not depend on k* alone, and what transfers is the RECOVERABILITY of f_c, which depends on the fit's signal-to-noise through l_k/d. Your k* is 2.84x lower, i.e. this run is the stiffer, harder-to-localise case -- so the 1.17 % transfers conservatively rather than optimistically." },
+
+    { "name": "l_k/d", "value": 0.0040704, "expr": "1/sqrt(k*)", "meaning": "fluctuation vs particle size",
+      "counterpart": 0.0068648, "tolerance": "receiver may be larger, not smaller",
+      "why_this_tolerance": "Your fluctuation is 1.69x larger relative to the bead than the one validated here, which is the favourable direction for localisation. Had it been smaller the 1.17 % would not have transferred at all." },
+
+    { "name": "tau_p/tau_k", "value": 8.1395e-4, "expr": "m/(gamma tau_k)", "meaning": "inertia negligible?",
+      "counterpart": 7.302e-5, "tolerance": "< 1e-2",
+      "why_this_tolerance": "The hard model check in this repository (metrics.json checks[0], limit 1e-2, margin 12.3 here). Yours is 7.3e-5, margin 137. Overdamped on both sides -- this group is genuinely shared." },
+
+    { "name": "T_obs/tau_k", "value": 2000.0, "expr": "", "meaning": "observation window / statistics",
+      "counterpart": 309.8, "tolerance": ">= 2000 to inherit the 1.17 %",
+      "why_this_tolerance": "The soft check in this repository is >= 100 and yours passes it. But the achieved 1.17 % was measured at 2000, and statistical error on a Lorentzian corner goes as 1/sqrt(T_obs/tau_k): 310 implies roughly sqrt(2000/310) = 2.5x the scatter, i.e. ~3 % rather than ~1.2 %. Still inside 5 %, with almost nothing left for anything else." },
+
+    { "name": "samples_per_tau_k", "value": 10.0, "expr": "tau_k/dt_sample", "meaning": "resolves the corner",
+      "counterpart": 8.39, "tolerance": ">= 10 by this repository's convention",
+      "why_this_tolerance": "Convention inherited from bd-physics, not a derived limit. Stated as a tolerance so the 16 % shortfall is visible; see findings[0] for why the two repositories' numbers differ by 2*pi." }
+  ],
+
+  "parsed_back": {
+    "received": [
+      { "symbol": "d", "value": 4.95, "unit": "um", "source": "as sent", "evidence": "measured", "origin": "am", "tier": 0 },
+      { "symbol": "rho_particle", "value": 1.05, "unit": "g/cm^3", "source": "as sent", "evidence": "handbook", "origin": "am", "tier": 0 },
+      { "symbol": "T", "value": 293.15, "unit": "K", "source": "as sent, imported at tier 3 because you marked it assumed -- NOT inherited as tier 0", "evidence": "assumed", "origin": "am", "tier": 3 },
+      { "symbol": "eta", "value": 1.0016e-3, "unit": "Pa*s", "source": "as sent", "evidence": "computed", "origin": "am", "tier": 3 },
+      { "symbol": "k_t", "value": 3.5054, "unit": "pN/um", "source": "as sent, model value", "evidence": "computed", "origin": "am", "tier": 2 },
+      { "symbol": "h_nominal", "value": 8.0, "unit": "um", "source": "as sent, piezo reading not absolute height", "evidence": "assumed", "origin": "am", "tier": 3 },
+      { "symbol": "pixel_size", "value": 0.06453, "unit": "um", "source": "as sent", "evidence": "measured", "origin": "am", "tier": 0 }
+    ],
+    "derived_here": [
+      { "symbol": "a", "value": 2.475, "unit": "um",
+        "source": "d/2. Stated explicitly: this is the radius/diameter convention check. Your gate tables are written in a = 2.475 um and your plan writes gamma = 6*pi*eta*a, which agrees with d = 4.95 um as sent.",
+        "evidence": "computed", "origin": "bd", "tier": 1 },
+      { "symbol": "kT", "value": 4.0478e-3, "unit": "pN*um", "source": "k_B * 293.15 K", "evidence": "computed", "origin": "bd", "tier": 1 },
+      { "symbol": "gamma_0", "value": 0.046725, "unit": "pN*s/um",
+        "source": "6*pi*eta*a, bulk Stokes. NO wall correction applied by this repository -- see gaps[0].",
+        "evidence": "computed", "origin": "bd", "tier": 1 },
+      { "symbol": "gamma_corr", "value": 0.056584, "unit": "pN*s/um",
+        "source": "gamma_0 x 1.211, where 1.211 is YOUR declared Faxen factor at h = 8 um. This number is not this repository's physics; it is your assumption arithmetic, carried so the timescales below are comparable to your tables.",
+        "evidence": "assumed", "origin": "am", "tier": 3 },
+      { "symbol": "l_k", "value": 33.98, "unit": "nm", "source": "sqrt(kT/k_t). Round-trip check against your quoted 34 nm: agrees.", "evidence": "computed", "origin": "bd", "tier": 1 },
+      { "symbol": "tau_k", "value": 16.14, "unit": "ms", "source": "gamma_corr/k_t", "evidence": "computed", "origin": "bd", "tier": 1 },
+      { "symbol": "f_c_bulk", "value": 11.94, "unit": "Hz", "source": "k_t/(2*pi*gamma_0), no wall", "evidence": "computed", "origin": "bd", "tier": 1 },
+      { "symbol": "f_c_faxen", "value": 9.86, "unit": "Hz", "source": "k_t/(2*pi*gamma_corr). Round-trip check against your quoted 9.9 Hz: agrees to 0.4 %.", "evidence": "computed", "origin": "bd", "tier": 1 },
+      { "symbol": "tau_p", "value": 1.179, "unit": "us", "source": "m/gamma_corr with m from rho_particle and d", "evidence": "computed", "origin": "bd", "tier": 1 }
+    ]
+  },
+
+  "assumptions": [
+    { "name": "dimensionality", "status": "differs",
+      "mine": "dimensions: 2. The sketch's U(r) = 1/2 k_t r^2 with r = sqrt(x^2+y^2) fixes the plane; structure.dim basis is `given`.",
+      "theirs": "3D chamber, axial stiffness present, drive and measurement in x only",
+      "worth": { "value": 0.0, "unit": "percent",
+                 "note": "Zero on THIS answering quantity. <x^2>, C(t), the PSD and f_c = k_t/(2 pi gamma) are per-component and carry no `dim`. It would be non-zero on <r^2> = dim*kT/k (x1.5) and on the total MSD, neither of which is asked for here." },
+      "note": "Declared differs rather than shared even though the worth is zero, because the zero is conditional on the observable list and would silently stop holding if <r^2> were added." },
+
+    { "name": "wall_drag", "status": "differs",
+      "mine": "No wall. gamma_0 = 6*pi*eta*a, infinite medium.",
+      "theirs": "Faxen parallel, first order, +16 % to +87 % over the ladder",
+      "worth": { "value": 21.1, "unit": "percent",
+                 "note": "On gamma at your reference rung h = 8 um, hence 17.4 % on f_c. Taken from YOUR declared factor, not derived here." },
+      "note": "This is the largest declared difference and it is structural, not a parameter. Anything this round says about gamma is about bulk gamma." },
+
+    { "name": "medium", "status": "shared",
+      "mine": "Newtonian water, no hydrodynamic memory. out_of_scope in this case's goal.yaml names the Basset term explicitly.",
+      "theirs": "Newtonian water at 20 C", "worth": null },
+
+    { "name": "camera_model", "status": "differs",
+      "mine": "None. A BD trajectory is sampled exactly, with no exposure integration and no localisation error.",
+      "theirs": "0.45 ms exposure deflating var(x) by 1.86 %; epsilon ~10 nm inflating it by ~9 %",
+      "worth": { "value": 8.0, "unit": "percent",
+                 "note": "Net effect on the equipartition alpha at your assumed epsilon, dominated by epsilon rather than by blur. Requirement epsilon <= 7.6 nm follows from it." },
+      "note": "The toy estimate your ask is testing omitted these too, so this round does not close the question it was sent to close -- it relocates it to a measurable precondition (your P8)." },
+
+    { "name": "particle_count", "status": "differs",
+      "mine": "N = 1000, non-interacting replicas. The box is a container for replicas, not a system: anchors on a 1d lattice at L = 32 d, l_k = 0.00407 d, anchor-to-edge 123 l_k.",
+      "theirs": "one isolated bead per ROI",
+      "worth": { "value": 0.0, "unit": "percent",
+                 "note": "Zero on the central value. NOT zero on the error bar: the 1.17 % is an ensemble-of-1000 number. One experimental bead at the same T_obs/tau_k would scatter ~sqrt(1000) = 32x more. This is the single most important line in this document." } },
+
+    { "name": "trap_linearity", "status": "shared",
+      "mine": "Exactly harmonic by construction, at all amplitudes.",
+      "theirs": "x_eq <= 0.15a, stop above ~0.3a",
+      "worth": null,
+      "note": "Shared in the sense that both stay inside the harmonic regime -- but note the simulation cannot detect a real trap's anharmonicity, so it cannot validate your 0.15a choice." },
+
+    { "name": "inertia", "status": "shared",
+      "mine": "Overdamped. tau_p/tau_k = 8.14e-4 against a hard limit of 1e-2.",
+      "theirs": "neglected", "worth": null },
+
+    { "name": "drift", "status": "differs",
+      "mine": "Absent by construction.",
+      "theirs": "z drift under ~0.3 um per rung, witnessed",
+      "worth": null,
+      "note": "Not quantifiable here. Your own plan already states the consequence -- a monotonic drift and the Faxen curve have the same shape -- and nothing in this round touches it." }
+  ],
+
+  "gaps": [
+    { "what": "The Faxen separation itself, and therefore h0.",
+      "why": "This case has no wall and one height. gamma_0 is bulk Stokes; there is no h in the system at all.",
+      "consequence": "The answering quantity you asked for (h0, +/-0.2 um) is NOT answered. This round answers the per-rung input precision that the h0 fit consumes.",
+      "would_need": "A runner for a trapped sphere at a no-slip wall with a height-dependent mobility. RUNNERS in cli.py has one card today (passive-sphere--harmonic-trap); this would be a second one, and running the trap runner on it would silently compute the wrong system." },
+
+    { "what": "Motion blur and localisation noise.",
+      "why": "A BD trajectory has no detector. Adding both is a post-processing layer over the sampled positions, not a change of physics -- so it is cheap, but it does not exist yet.",
+      "consequence": "The 1.17 % is a noise-free number. Your requirement epsilon <= 7.6 nm was derived analytically here, not simulated.",
+      "would_need": "A sampling layer: integrate positions over t_exp, then add Gaussian epsilon. Roughly a day, and it would let the next round answer the question this one deferred." },
+
+    { "what": "The six-rung least-squares fit for h0 and gamma_bulk.",
+      "why": "No ladder was simulated. requirements[3] passes your own 3 %/rung figure through unchanged.",
+      "consequence": "sigma_gamma_per_rung <= 3 % is recorded but unverified. Do not read it as corroborated.",
+      "would_need": "The wall runner above, plus a synthetic ladder at six heights x the seed count." },
+
+    { "what": "One bead versus 1000 replicas.",
+      "why": "N = 1000 was chosen as a statistics device and settled confirmed_by: run.",
+      "consequence": "Every error bar in this document is an ensemble error bar. The experiment has one bead per rung.",
+      "would_need": "Re-run at n_replicas = 1 with many seeds and report the per-realisation scatter. Cheap; should be the first thing the next round does." }
+  ],
+
+  "findings": [
+    { "what": "The two repositories' sampling conventions differ by exactly 2*pi.",
+      "am_says": "f_s >= 10 f_c (gate sampling.aliased / G14c). At f_c = 9.9 Hz that is 99 Hz, and 520 fps clears it 5.3x.",
+      "bd_says": "sample interval = tau_k/10, i.e. f_s = 10/tau_k = 62.8 f_c = 620 Hz. 520 fps is 16 % short.",
+      "kind": "convention_mismatch",
+      "resolution_owner": "human" },
+
+    { "what": "The localisation-noise budget is already spent at the assumed epsilon.",
+      "am_says": "epsilon = 10 nm is ~9 % of var(x); measure it on a stuck bead (P8) and correct for it.",
+      "bd_says": "8 % on alpha is a bias, not a variance, and it does not average down over rungs or segments. A 5 % budget needs epsilon <= 7.6 nm; correcting for a measured epsilon is fine, but the correction's own error then becomes the budget.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "am" },
+
+    { "what": "5 s per rung is 6.4x below the configuration the 1.17 % was measured at.",
+      "am_says": "3 segments x 5 s per velocity, plus 5 s of held bead at step 9c, chosen against a ~15-independent-samples-per-plateau argument.",
+      "bd_says": "T_obs/tau_k = 310 versus the validated 2000. Passes the soft floor of 100; implies ~3 % rather than ~1.2 % on f_c, leaving almost nothing for the epsilon bias above.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "am" },
+
+    { "what": "The error bars in this document are ensemble error bars.",
+      "am_says": "(not addressed -- the ask did not distinguish)",
+      "bd_says": "N = 1000 independent replicas. One bead would scatter ~32x more at the same T_obs/tau_k. Any comparison of this 1.17 % against a single-bead measurement is invalid as stated.",
+      "kind": "assumption_mismatch",
+      "resolution_owner": "bd" }
+  ],
+
+  "out_of_scope": [
+    "alpha(a) across sizes -- this case is one diameter.",
+    "The perpendicular Faxen coefficient, carried over from the ask.",
+    "Many-body effects. N = 1000 here is an independent-particle ensemble, not an interacting suspension."
+  ],
+
+  "derived_from": [
+    { "ref": "am:bridge/threads/trap-stiffness-recovery/r1/ask_simulation.json", "hash": "sha256:58cfc405231a2970",
+      "note": "hash is of the plan the ask was distilled from; the ask itself is in-thread and unhashed by design" }
+  ],
+  "confirmed_by": null
+}
