@@ -671,6 +671,43 @@ vacuously true. BD's `ci.yml` carries the same guard for a shell loop (`if [
 "$checked" -eq 0 ]; then echo "::error::no SEALED.sha256 found -- this job
 silently passed on nothing"`), because a seal job that finds no seals is green.
 
+### …and the guard that said so could only see half the rules
+
+`_coverage_checks` enumerates `rep.err` calls in the source, so **a new rule
+cannot arrive without a negative fixture**. That sentence was read as "every
+rule is covered", and it was never that: four rules — **R5b, R8, R12, R13** —
+only ever warn, so none of them was inside any guard, in the repository that
+devotes a section above to what R5's soft warning bought.
+
+Measuring first changed the fix. All seven warn rules were firing; what was
+missing was anything that would notice one stopping. So `fixtures/warn/
+expected.json` pins an **anchor** per rule — a sealed document that must keep
+producing that warning, with the fragment identifying it and the full set of
+warning rules that document produces. An anchor is cheaper than a fixture and
+says more: it pins a fact about the archive rather than about a synthetic file.
+
+Running the enumeration on warn calls then found three rules the hand-written
+list of four had missed — R1, R10, R11 — and each was a different thing:
+
+- **R10's warn branch had gone quiet the day the schema improved.** It fires on
+  `measured`/`handbook` with no `evidence_classes` map, and every live entry has
+  carried the map since C4 was answered. Fixtured.
+- **R5b had never fired for its own reason at all.** Its one live firing is
+  inside another rule's fixture, where flipping `direction` flips which side is
+  the consumer. Fixtured.
+- **R1 cannot be anchored, and that is now declared with its reason** rather
+  than filtered out — its warn sites are missing-dependency paths that
+  `--selftest` treats as errors on purpose. Finding it also exposed that the
+  enumeration missed the `(rep.err if STRICT else rep.warn)` form, which is the
+  idiom the STRICT convention itself is written in — and that the KB-entry path
+  used a bare `rep.warn` for the same two dependencies the wire path treats as
+  fatal. Both fixed.
+
+It is rule-level and not branch-level. Two warn branches are known to be
+unanchored — R8's `may_be_gate_threshold` and R11's `corrects[]`-exempt path —
+and `_branch_note` says so, because rule-level beats the previous state of
+nothing and naming what it misses is what keeps it a trade.
+
 ## A rule that fires on documents nobody may fix must say so
 
 R8, R12 and R13 produce **permanent warnings** on old documents, all for the same

@@ -587,7 +587,8 @@ def validate_kb_entry(path: Path, manifest: dict | None) -> Report:
         fm = {k: (v.isoformat() if isinstance(v, (_dt.date, _dt.datetime)) else v)
               for k, v in fm.items()}
     except ImportError:  # pragma: no cover
-        rep.warn("R1", "PyYAML not installed -- frontmatter unchecked")
+        (rep.err if STRICT else rep.warn)(
+            "R1", "PyYAML not installed -- frontmatter unchecked")
         return rep
 
     try:
@@ -604,7 +605,8 @@ def validate_kb_entry(path: Path, manifest: dict | None) -> Report:
             loc = "/".join(str(p) for p in e.path) or "<root>"
             rep.err("R1", f"{loc}: {e.message}")
     except ImportError:  # pragma: no cover
-        rep.warn("R1", "jsonschema not installed -- frontmatter shape unchecked")
+        (rep.err if STRICT else rep.warn)(
+            "R1", "jsonschema not installed -- frontmatter shape unchecked")
 
     # R6 against the entry's own source, plus every ref in derived_from.
     if manifest is not None:
@@ -1076,6 +1078,78 @@ def _r6_branch_checks() -> list[str]:
     return failures
 
 
+def _warning_checks() -> list[str]:
+    """The warning surface, pinned to one anchor document per rule.
+
+    `fixtures/invalid/` guards every rule that raises an ERROR, and
+    `_coverage_checks` makes that permanent by enumerating `rep.err` calls in
+    the source. Nothing guarded the other half. Four rules -- R5b, R8, R12,
+    R13 -- only ever warn, so each of them could have stopped firing and
+    --selftest would have stayed clean, in a repository whose README devotes a
+    section to what R5's soft warning bought.
+
+    Measuring first changed the shape of the fix. All seven warning rules do
+    fire on the live corpus, so none of them was dead; what was missing was
+    anything that would notice if one died. An anchor is cheaper than a
+    fixture per rule and says more: it pins a warning that a sealed document
+    must keep producing, which is a fact about the archive rather than about a
+    synthetic file.
+
+    R5b is the exception and the reason to measure. Its only live firing was
+    inside `fixtures/invalid/r1-direction-const.json`, where flipping
+    `direction` flips which side is the consumer and makes every `origin: am`
+    value look like it came home. Alive by accident, on another rule's
+    fixture, never once for its own reason. That one gets a real fixture.
+    """
+    path = ROOT / "fixtures/warn/expected.json"
+    if not path.exists():
+        return ["fixtures/warn/expected.json is missing, so no warning rule is "
+                "pinned and every one of them could die unobserved"]
+    expected = {k: val for k, val in json.loads(path.read_text()).items()
+                if not k.startswith("_")}
+    if not expected:
+        return ["fixtures/warn/expected.json pins nothing -- a check that "
+                "examines no rule passes vacuously"]
+
+    mf = ROOT / "hashes.json"
+    manifest = json.loads(mf.read_text()) if mf.exists() else None
+    failures = []
+    for rule, spec in sorted(expected.items()):
+        doc = ROOT / spec["doc"]
+        if not doc.exists():  # a directory counts as existing, for `kind: thread`
+            failures.append(f"{rule}: anchor {spec['doc']} does not exist")
+            continue
+        # The rationale prints once per run, so a fragment taken from it is
+        # absent the second time. Clearing makes each anchor independent of
+        # the order the others ran in.
+        _RATIONALES_SEEN.clear()
+        if spec.get("kind") == "thread":
+            rep = r11_thread(doc, manifest)
+        else:
+            rep = (validate_kb_entry if doc.suffix == ".md" else validate)(doc, manifest)
+        if rep.errors:
+            failures.append(f"{rule}: anchor {spec['doc']} now has "
+                            f"{len(rep.errors)} error(s); an anchor has to be a "
+                            "document that is otherwise clean")
+        hit = [w for w in rep.warnings if w.startswith(rule + " ")]
+        if not hit:
+            failures.append(f"{rule} no longer warns on {spec['doc']}. Either "
+                            "the rule stopped firing or the anchor stopped "
+                            "violating it; both need a human.")
+            continue
+        if not any(spec["fragment"] in w for w in hit):
+            failures.append(f"{rule} warns on {spec['doc']} but not with "
+                            f"{spec['fragment']!r} -- it fired for a different "
+                            f"reason: {hit[0][:110]!r}")
+        got = sorted({w.split()[0] for w in rep.warnings})
+        if got != spec["rules"]:
+            failures.append(f"{rule}: {spec['doc']} now warns {got}, pinned as "
+                            f"{spec['rules']}. Re-pin it deliberately; a warning "
+                            "surface that moves without review is the thing "
+                            "this file exists to stop.")
+    return failures
+
+
 def _coverage_checks(expected: dict) -> list[str]:
     """Refuse to pass on nothing, and refuse to let an error rule go unfixtured.
 
@@ -1096,6 +1170,32 @@ def _coverage_checks(expected: dict) -> list[str]:
     out: list[str] = []
     for rule in sorted(err_rules - fixture_rules, key=lambda r: int(r.strip("Rb"))):
         out.append(f"{rule} can raise an error and has no negative fixture")
+
+    # The same guard for the other half. Without it the enumeration reads as
+    # "every rule is covered" while covering only the rules that can fail the
+    # build -- which is how four warn-only rules went unguarded next to a
+    # check whose whole job was to notice that.
+    warn_rules = set(re.findall(r'rep\.warn\(\s*"(R\d+b?)"', src))
+    warn_rules |= set(re.findall(
+        r'\(rep\.err if STRICT else rep\.warn\)\(\s*"(R\d+b?)"', src))
+    anchor_path = ROOT / "fixtures/warn/expected.json"
+    anchored, declared = set(), {}
+    if anchor_path.exists():
+        raw_anchor = json.loads(anchor_path.read_text())
+        anchored = {k for k in raw_anchor if not k.startswith("_")}
+        declared = raw_anchor.get("_unanchorable", {})
+    for rule, why in sorted(declared.items()):
+        if not str(why).strip():
+            out.append(f"{rule} is declared unanchorable with an empty reason. "
+                       "The reason IS the declaration; same contract as "
+                       "not_applicable() on the BD side.")
+    anchored |= set(declared)
+    for rule in sorted(warn_rules - anchored, key=lambda r: int(r.strip("Rb"))):
+        out.append(f"{rule} can warn and has no anchor in fixtures/warn/"
+                   "expected.json")
+    for rule in sorted(anchored - warn_rules, key=lambda r: int(r.strip("Rb"))):
+        out.append(f"{rule} is anchored in fixtures/warn/expected.json and no "
+                   "longer warns anywhere in the source")
 
     # The manifest must stay sorted, and this is the check that keeps it sorted.
     # The prefix partition (am: keys to one side, bd: to the other) prevents a
@@ -1193,7 +1293,8 @@ def selftest() -> int:
         for c in coverage:
             print(f"          {c}")
     else:
-        print(f"ok    coverage  (every error rule has a fixture; "
+        print(f"ok    coverage  (every error rule has a fixture, every warn "
+              f"rule an anchor or a declared reason; "
               f"{len(list(ROOT.glob('threads/*/r*/ask_*.json')))} thread documents)")
 
     if meta:
@@ -1214,6 +1315,16 @@ def selftest() -> int:
     else:
         print("ok    R6 branch checks  (5 cases: unsuffixed, suffixed, none, "
               "placeholder, unregistered)")
+    warn_failures = _warning_checks()
+    if warn_failures:
+        bad += 1
+        print("BAD   warning anchors:")
+        for f in warn_failures:
+            print(f"          {f}")
+    else:
+        print(f"ok    warning anchors  (every rule that can warn is pinned to a "
+              f"document that must keep producing it)")
+
     resolve_failures = _resolve_checks()
     if resolve_failures:
         bad += 1

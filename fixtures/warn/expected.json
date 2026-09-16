@@ -1,0 +1,75 @@
+{
+  "_comment": "The warning surface, pinned. `fixtures/invalid/` guards every rule that raises an ERROR and `_coverage_checks` makes that permanent by enumerating `rep.err` calls in the source; nothing guarded the other half, and the enumeration could not see it. Four rules (R5b, R8, R12, R13) only ever warn, so any of them could have stopped firing with --selftest still clean. Each entry names an anchor that MUST keep producing that warning, the fragment identifying it -- taken from the message HEAD, never the rationale, which prints once per run and is absent the second time -- and the full set of warning rules that anchor produces. The set is pinned on purpose: a warning surface that moves is worth one line of review.",
+  "_anchor_note": "Two anchors are synthetic, and both are rules that had never fired for their own reason. R5b's only live firing was inside fixtures/invalid/r1-direction-const.json, where flipping `direction` flips which side is the consumer and makes every `origin: am` value look like it came home -- alive by accident, on another rule's fixture. R10's warn branch fires only on `measured` or `handbook` with no map, and every live entry now carries the map, so it had gone quiet the moment C4 was answered. The fixture is r1's import as it read before that.",
+  "_branch_note": "STATED RATHER THAN IMPLIED: this is rule-level coverage, not branch-level. Two warn branches are known to be unanchored -- R8's `may_be_gate_threshold: true` on an imported entry, and R11's corrects[]-exempt path -- and a third rule's branches are covered only because R6 has its own inline branch checks. Rule-level beats nothing, which was the previous state, and saying which branches it does not reach is what keeps it a trade rather than a claim.",
+  "_unanchorable": {
+    "R1": "Its two warn sites are missing-dependency paths (`PyYAML`, `jsonschema`), and under --selftest they are errors by design -- STRICT exists because a selftest that reports clean with a rule switched off is this repository's oldest recorded failure. So R1 can only warn in an environment the selftest refuses to be, and no anchor can produce it. Declared rather than filtered out: the coverage check counts both `rep.warn(\"R1\"` and the `(rep.err if STRICT else rep.warn)` form, so this rule is seen and then excused, not missed."
+  },
+  "R4": {
+    "doc": "threads/trap-stiffness-recovery/r1/ask_simulation.json",
+    "fragment": "unknowns are declared only through",
+    "rules": [
+      "R4"
+    ]
+  },
+  "R5": {
+    "doc": "threads/trap-stiffness-recovery/r2/ask_experiment.json",
+    "fragment": "echoes am's own number",
+    "rules": [
+      "R5"
+    ]
+  },
+  "R5b": {
+    "doc": "fixtures/warn/r5b-came-home-mislabelled.json",
+    "fragment": "the consumer's own number",
+    "rules": [
+      "R4",
+      "R5b"
+    ]
+  },
+  "R6": {
+    "doc": "threads/trap-stiffness-recovery/r8/ask_experiment.json",
+    "fragment": "rather than the unsuffixed key",
+    "rules": [
+      "R6"
+    ]
+  },
+  "R8": {
+    "doc": "threads/trap-stiffness-recovery/r3/ask_simulation.json",
+    "fragment": "ships tier 2 but evidence",
+    "rules": [
+      "R13",
+      "R8"
+    ]
+  },
+  "R10": {
+    "doc": "fixtures/warn/r10-bare-evidence-class.md",
+    "fragment": "with no `evidence_classes` map",
+    "rules": [
+      "R10"
+    ]
+  },
+  "R11": {
+    "doc": "threads/trap-stiffness-recovery",
+    "fragment": "derived independently on both sides",
+    "rules": [
+      "R11"
+    ],
+    "kind": "thread"
+  },
+  "R12": {
+    "doc": "threads/trap-stiffness-recovery/r4/ask_experiment.json",
+    "fragment": "has no `kind`",
+    "rules": [
+      "R12"
+    ]
+  },
+  "R13": {
+    "doc": "threads/trap-stiffness-recovery/r3/ask_simulation.json",
+    "fragment": "plan_ref.ref is",
+    "rules": [
+      "R13",
+      "R8"
+    ]
+  }
+}
