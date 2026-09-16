@@ -40,7 +40,18 @@ revision branch. A warning standing on a document that predates a field is the
 only record of when the vocabulary changed; this document uses a plain path with
 the revision in `rev`, which is the form that came after.
 
-## Two things this round fixed on the way, both this side's own
+## Three things this round fixed on the way, all this side's own
+
+- **A third dead `rev`, in this document, caught after it was committed.** r9's
+  own citation of r7 carried `f2e5f94` — which is *"r3: pin its refs to a
+  revision"*, a commit at which **r7 did not exist**. The rev was copied off
+  r5's citation of *r3* and landed on the *r7* ref. The hash was right: r7's
+  blob at `5ec3531` hashes to the `e45e8b5f6cdc9562` cited. Corrected in place,
+  and the test for that is **"is it cited?"** rather than "is it committed?" —
+  nothing cites r9 and its hash is in no manifest key, so the edit moves nothing
+  anybody depends on. That is the same question asked of the r8 import entry and
+  of the `@r9` key earlier today, and the cascade rule exists for the answer
+  *yes*, which is r7's case and not this one.
 
 - **A dead `rev`.** `r8/kb_entry_for_am.md` cited
   `bd:verify/verify_ladder_tolerance.py` at `07d1048`, where that path does not

@@ -89,8 +89,8 @@
       "note": "The round that answered r7. Read before this one: its first line reads as good news and the round is the opposite." },
     { "ref": "am:bridge/threads/trap-stiffness-recovery/r7/ask_simulation.json",
       "hash": "sha256:e45e8b5f6cdc9562",
-      "rev": "f2e5f94",
-      "note": "The document corrected here. Unedited: a sealed document is not edited, metadata included -- that is what the suffixed-key cascade taught." }
+      "rev": "5ec3531",
+      "note": "The document corrected here. Unedited: a sealed document is not edited, metadata included -- that is what the suffixed-key cascade taught. ⚠ rev corrected 2026-09-16: this cited f2e5f94, which is 'r3: pin its refs to a revision' -- r7 did not exist at that commit. The rev was copied off r5's citation of r3 and landed on the r7 ref; the hash was right, and r7's blob at 5ec3531 hashes to the e45e8b5f6cdc9562 above. Third instance of this family in two days, and the second of mine: a rev is itself a citation and it rots the same way." }
   ],
   "confirmed_by": null
 }
