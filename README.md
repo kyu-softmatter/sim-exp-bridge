@@ -96,8 +96,30 @@ dangerous case.
 | `handbook` | 0 | |
 | `computed` | 1 or 3 | **inherits** the worst tier of its inputs — AM's `eta` is tier 3 here because it is computed from an assumed `T` |
 | `assumed` | 3 | a standing choice, a default, a placeholder |
-| `simulated` | — | not admissible as a tier at all; lands as an external KB entry |
-| `round_trip` | — | this number originated in the receiving repository |
+| `simulated` | — | no tier. Lands only in the external KB namespace with `may_be_gate_threshold: false`, **never in a `system.yaml`** |
+| `round_trip` | — | this number originated in the receiving repository, and **is not admissible as an input** (R14 on the wire; refuse at import and point at the local original) |
+
+### `origin` is load-bearing at rest, not only in transit
+
+The wire is already right — `origin` is required on every `quantity` — and the
+loss happens **after** import, because neither repository has a field for it at
+rest. In BD's `system.yaml`, `d: 5.0 um, tier: 0` (the sketch said so) and
+`d: 4.95 um, tier: 0` (**measured on AM's instrument**) are indistinguishable;
+BD's rule 3 enumerates four provenance kinds — sketch, literature, handbook,
+estimate — and `am:measured` is a fifth. So **both importers are obliged to
+keep `origin`**, beside the derived tier rather than in place of it. BD carries
+`provenance_kind: am_measured | am_computed | am_assumed`.
+
+**It is the same failure once in each direction.** On the AM side
+`evidence: computed` already means *arithmetic over measured kb values*, so a
+simulated `tau_c` landing in that token is indistinguishable from a propagated
+measurement. No rule in either repository catches either half; the discipline
+is the rule.
+
+**Not a new tier number**, for BD's reason: renumbering touches 145 KB entries
+and every `system.yaml`, and it would encode "foreign" as a *confidence* level,
+which it is not — an AM measurement is better evidence than most of BD's
+tier 0, not worse.
 
 ## The thirteen rules
 
@@ -123,6 +145,7 @@ copy.
 | R11 | a same-origin quantity agrees across rounds | a copy that drifted, propagating at the speed of the protocol |
 | R12 | every `gaps[]` entry has a `kind` | "write code", "change method" and "move bytes" being one field |
 | R13 | a `ref` is a path, not a path plus a revision | masking R6's own revision branch |
+| R14 | no `round_trip` value in `system_primitives` | a number that came home defining the system it came home to |
 
 R5 is deliberately narrow. After two rounds the other repository *always* appears
 in your ancestry — that is a round trip working. What it catches is a number

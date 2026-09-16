@@ -58,7 +58,18 @@ UNIT_TOKENS = {
     "Hz", "kHz", "MHz",
     "W", "mW", "uW",
     "mol", "L", "mL", "uL",
-    "px", "count", "percent", "dimensionless", "fps", "rad",
+    "percent", "dimensionless", "rad",
+    # C5: `px`, `fps` and `count` were here and are deliberately absent. All
+    # three parse in pint, as the wrong thing -- `fps` is feet per second
+    # (0.3048 m/s) and `px` is 1/96 inch (0.2646 mm), verified against pint in
+    # the BD clone. AM's pixel is 0.06453 um, so a `px` value crossing the wire
+    # is wrong by ~4100x, and because pint's `px` has dimension [length] it is
+    # dimensionally consistent with what the receiver expects and nothing
+    # raises. R2 passed it because `parse_unit` asks whether a token is KNOWN,
+    # not whether it means what the sender meant -- the failure W2 exists to
+    # prevent, inside the vocabulary W2 is enforced against. Frame rates cross
+    # as `Hz`; pixel counts cross as `dimensionless` with the symbol carrying
+    # the meaning (`roi_width_px`).
 }
 _TOKEN_RE = re.compile(r"^([A-Za-z]+)(?:\^(-?\d+))?$")
 
@@ -202,6 +213,31 @@ def r3_primitives(doc: dict, rep: Report) -> None:
 
 
 # ------------------------------------------------- R4: unknown keeps it a draft
+def r14_round_trip_not_an_input(doc: dict, rep: Report) -> None:
+    """A value that came home may not define the system it came home to.
+
+    C3, the enforceable half. R5 refuses a hard requirement resting on the
+    consumer's own number; the same argument applies one layer earlier to a
+    `system_primitives` entry, which is what the receiving side builds its
+    physical system out of. A `round_trip` quantity there is the sender's own
+    value being handed back as the definition of the case, and the receiver
+    would then derive everything from it and compare the result to its origin.
+
+    BD's half of C3 is not enforceable here -- refusing `round_trip` at import
+    and pointing at the local original happens in its pipeline. This rule
+    covers the wire.
+    """
+    for i, q in enumerate(doc.get("system_primitives", []) or []):
+        if q.get("evidence") == "round_trip":
+            rep.err("R14", f"system_primitives[{i}] ({q.get('symbol')}) is "
+                           f"evidence: round_trip.",
+                    "A value that came home cannot define the system it came "
+                    "home to -- the receiver would derive from it and then "
+                    "compare the result against its own origin. Send the "
+                    "primitives it was derived from, or cite the receiver's "
+                    "local original instead of echoing it back.")
+
+
 def r4_draft(doc: dict, rep: Report) -> None:
     """An unresolved assumption has to be declared as unresolved.
 
@@ -746,6 +782,7 @@ def validate(path: Path, manifest: dict | None) -> Report:
     r1_schema(doc, rep)
     r2_units(doc, rep)
     r3_primitives(doc, rep)
+    r14_round_trip_not_an_input(doc, rep)
     r4_draft(doc, rep)
     r5_circular(doc, rep)
     r5b_round_trip_labels(doc, rep)

@@ -10,5 +10,7 @@
   "r7-machine-confirmed.json": "reserve this field for a human",
   "r9-kb-calibrations": "is in a calibrations namespace",
   "r10-class-better-than-worst": "is better than the worst entry",
-  "r11-drifted-copy": "so the later ones are copies"
+  "r11-drifted-copy": "so the later ones are copies",
+  "r2-pixel-token-removed.json": "unknown unit token",
+  "r14-round-trip-as-input.json": "cannot define the system it came home to"
 }
