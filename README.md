@@ -391,6 +391,13 @@ either peer. Not doubt about the physics — a plan whose provenance chain reads
   the correct response (21219 against 21221 in r2's table, plus the check that
   the expression carries `k_t`, `d` and `kT` and **no drag**).
 
+- **Operator consent does not relay either.** The bridge owner passed on an
+  operator ruling, and the BD session went to its own user for it instead of
+  acting — correctly. Same rule one step over: a permission has to arrive from
+  the person whose lab it is, and a peer reporting that consent exists is not
+  the consent. It then laid out for that user exactly what publishing exposed
+  before asking, which is what makes the answer informed rather than assumed.
+
 The bridge owner is not exempt. Writing down why a rule changed is coordination;
 moving the thread's physics into a message is a bypass.
 
@@ -502,6 +509,33 @@ check that every `bd:` rev is a real object in the BD repository — but that
 couples the validator to two external layouts, which may cost more than it buys.
 BD's failing case was an external `bd:verify/...` ref, so a bridge-internal
 subset would not have caught it.
+
+### A derived count is a merge-conflict magnet
+
+Deriving a documented number instead of typing it fixes staleness and creates a
+new failure in its place. BD's repository had 48 of 102 documented counts wrong,
+so it made them derived and gated — and then the gate fired twice in one
+afternoon, both times correctly, for two different reasons:
+
+1. **A branch predating the gate.** CI runs on the merge commit, so the new gate
+   met a branch's additions: verify scripts 81→92, KB entries 148→157. The
+   repository already had the enforcing version and the branch had been cut
+   before it landed — which is why that PR's "known and not fixed: the header
+   says 1008 passed" was wrong about its own repository.
+2. **Two writers re-measuring the same derived field.** `main` moved again
+   mid-fix and conflicted on exactly the same count lines, because both sides had
+   independently re-measured the same numbers. The resolution is re-measuring —
+   take `main` and re-run the fixer — not picking a side. Its tool refuses to
+   guess how to split `passed + skipped`, which is the right refusal.
+
+The second is the durable one, and it has a design answer rather than a
+procedural one: **partition a derived file by owner so that two writers never
+compute the same field.** `hashes.json` here is exactly such a file — two
+sessions append to it every round — and it has never conflicted on content,
+because the ownership rule assigns keys by prefix (`am:` to one side, `bd:` to
+the other). The suffixed-key convention prevents *cascades*; the prefix
+partition prevents *conflicts*. They are different problems and both needed
+solving.
 
 ### Pattern 2 — a check that exists and is not wired to what it describes
 
