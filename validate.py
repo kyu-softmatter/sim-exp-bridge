@@ -490,6 +490,114 @@ def validate_kb_entry(path: Path, manifest: dict | None) -> Report:
     return rep
 
 
+# ------------------------------------- R11: a copy that drifted, across rounds
+def _quantities(node, where, out):
+    """Every `{symbol, value, unit, origin}` node in a document, with its path."""
+    if isinstance(node, dict):
+        if {"symbol", "value", "unit", "origin"} <= node.keys():
+            out.append((node, where))
+        for k, v in node.items():
+            _quantities(v, f"{where}.{k}", out)
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            _quantities(v, f"{where}[{i}]", out)
+
+
+#: Relative tolerance below which a same-origin difference is recomputation
+#: rather than drift. See r11_thread's docstring for how it was chosen.
+R11_TOL = 1e-3
+
+
+def r11_thread(thread_dir: Path, manifest: dict | None) -> Report:
+    """One value, two documents, two answers -- and nothing noticed.
+
+    This generalises the two defects this thread actually produced, which BD was
+    right to call one shape rather than two coincidences:
+
+      * `2 D t_exp / 3` was wrong in r1 and was still wrong three rounds later,
+        because every later document had copied it;
+      * six `tier` values in r1 were unreachable from their own `evidence` and
+        propagated into r2, r3 and r5 the same way.
+
+    Both were numbers living in text that each document carried carefully and
+    nothing cross-checked. The discriminator is `origin`:
+
+      same symbol, SAME origin   -> one is a copy of the other. They must agree.
+      same symbol, DIFFERENT origin -> independent re-derivation, which is the
+                                    protocol working. Reported, never an error:
+                                    AM's f_c = 9.9 Hz against BD's 9.86 Hz is a
+                                    round-trip check passing, not a defect.
+
+    A disagreement named in some document's `corrects[]` is a declared
+    supersession and is exempt -- that is what `corrects[]` is for.
+
+    `R11_TOL` separates recomputation from disagreement. Re-deriving kT in a
+    later round and printing one more figure moves it by ~1e-4 relative; the
+    drifts this rule exists for are factors (2*u/3 against u/3 is 2x, and a tier
+    does not have a value at all). 1e-3 sits two decades above the noise this
+    thread actually produced and three below the smallest real drift in it.
+    """
+    rep = Report(thread_dir)
+    docs = sorted(thread_dir.glob("r*/ask_*.json"))
+    if len(docs) < 2:
+        return rep
+
+    corrected: set[str] = set()
+    seen: dict[tuple[str, str], list[tuple[str, float, str, str]]] = {}
+    for d in docs:
+        try:
+            doc = json.loads(d.read_text())
+        except json.JSONDecodeError:
+            continue
+        for c in doc.get("corrects", []) or []:
+            for token in (c.get("what", "") + " " + " ".join(c.get("downstream", []) or [])).split():
+                corrected.add(token.strip(".,`'\"()"))
+        found: list = []
+        _quantities(doc, "", found)
+        for node, where in found:
+            key = (node["symbol"], node["origin"])
+            seen.setdefault(key, []).append(
+                (d.parent.name, node["value"], node["unit"], where))
+
+    for (symbol, origin), rows in sorted(seen.items()):
+        rounds = {r for r, *_ in rows}
+        if len(rounds) < 2:
+            continue
+        units = {u for _, _, u, _ in rows}
+        nums = [v for _, v, _, _ in rows]
+        if len(units) == 1:
+            lo, hi = min(nums), max(nums)
+            scale = max(abs(lo), abs(hi)) or 1.0
+            if (hi - lo) / scale <= R11_TOL:
+                continue        # recomputation, not drift
+        if symbol in corrected:
+            rep.warn("R11", f"{symbol} (origin {origin}) differs across "
+                            f"{sorted(rounds)} and is named in a corrects[] block "
+                            "-- declared supersession, exempt.")
+            continue
+        detail = ", ".join(f"{r}: {v:g} {u}" for r, v, u, _ in rows)
+        rep.err("R11", f"{symbol} carries origin {origin} in every round it "
+                       f"appears, so the later ones are copies -- and they "
+                       f"disagree: {detail}. Either one round corrected it "
+                       "without saying so (use corrects[]), or a copy drifted. "
+                       "This is the shape that kept 2*D*t_exp/3 alive for three "
+                       "rounds.")
+
+    cross: dict[str, set] = {}
+    for (symbol, origin), rows in seen.items():
+        cross.setdefault(symbol, set()).add(origin)
+    for symbol, origins in sorted(cross.items()):
+        if len(origins) > 1:
+            rows = [r for o in origins for r in seen[(symbol, o)]]
+            detail = ", ".join(f"{r}/{o}: {v:g} {u}"
+                               for o in sorted(origins)
+                               for r, v, u, _ in seen[(symbol, o)])
+            rep.warn("R11", f"{symbol} is derived independently on both sides "
+                            f"({detail}). Not a defect -- this is the round-trip "
+                            "check, and agreement here is evidence.")
+    return rep
+
+
 def validate(path: Path, manifest: dict | None) -> Report:
     rep = Report(path)
     try:
@@ -527,6 +635,28 @@ def selftest() -> int:
         else:
             bad += 1
             print(f"BAD   {p.relative_to(ROOT)} should be valid:")
+            for e in rep.errors:
+                print(f"          {e}")
+
+    for t in sorted(p for p in (ROOT / "threads").glob("*") if p.is_dir()):
+        rep = r11_thread(t, manifest)
+        if rep.ok:
+            print(f"ok    threads/{t.name}/  (R11 cross-round)")
+        else:
+            bad += 1
+            print(f"BAD   threads/{t.name}/ R11:")
+            for e in rep.errors:
+                print(f"          {e}")
+
+    for t in sorted(p for p in (ROOT / "fixtures/invalid").glob("r11-*") if p.is_dir()):
+        rep = r11_thread(t, manifest)
+        hit = [e for e in rep.errors if e.startswith("R11")]
+        if hit and len(hit) == len(rep.errors):
+            print(f"ok    fixtures/invalid/{t.name}/ -> R11 fired, and only R11")
+        else:
+            bad += 1
+            print(f"BAD   fixtures/invalid/{t.name}/: "
+                  f"{'R11 did not fire' if not hit else 'other rules fired too'}")
             for e in rep.errors:
                 print(f"          {e}")
 
