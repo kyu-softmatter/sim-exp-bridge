@@ -80,8 +80,7 @@
       "unit": "pN/um",
       "source": "trapping/goa.py force-curve --dial 1 at 100x Oil (NA 1.45 -> effective 1.325, n_bead 1.5715, n_medium 1.3245), a = 2.475 um. A MODEL value, not a measurement: the model predicts exactly alpha = 8.68/a and nothing else, which is what the run tests.",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "h_nominal",
@@ -210,8 +209,7 @@
       "unit": "Hz",
       "source": "AM gate table at a = 2.475 um, h = 8 um. NON-BINDING: derive your own before reading this.",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "gamma_corr_over_gamma_0",
@@ -219,8 +217,7 @@
       "unit": "dimensionless",
       "source": "Faxen at h = 8 um, s = 9a/(16h) = 0.174",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "sqrt_kT_over_alpha",
@@ -228,8 +225,7 @@
       "unit": "nm",
       "source": "Thermal amplitude at alpha = 3.5 pN/um",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "v_drive",
@@ -237,8 +233,7 @@
       "unit": "um/s",
       "source": "Velocity giving x_eq = 0.15a at h = 8 um",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "blur_on_var_x",
@@ -246,8 +241,7 @@
       "unit": "percent",
       "source": "2*D*t_exp/3 at 0.45 ms, h = 8 um",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     }
   ],
   "out_of_scope": [

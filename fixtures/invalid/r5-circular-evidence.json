@@ -7,7 +7,7 @@
     "round": 4,
     "reply_to": "../r1/ask_simulation.json"
   },
-  "status": "answered_with_gaps",
+  "status": "corrected",
   "run_ref": {
     "ref": "bd:runs/trap-2d-5um__a5ef4f45d589",
     "field": "metrics.json",
@@ -75,7 +75,8 @@
         {
           "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md",
           "field": "Analysis.wall_fit",
-          "hash": "sha256:58cfc405231a2970"
+          "hash": "sha256:58cfc405231a2970",
+          "rev": "9f971a8"
         }
       ]
     }
@@ -171,8 +172,7 @@
         "unit": "pN/um",
         "source": "as sent, model value",
         "evidence": "computed",
-        "origin": "am",
-        "tier": 2
+        "origin": "am"
       },
       {
         "symbol": "h_nominal",
@@ -225,10 +225,9 @@
         "symbol": "gamma_corr",
         "value": 0.056584,
         "unit": "pN*s/um",
-        "source": "gamma_0 x 1.211, where 1.211 is YOUR declared Faxen factor at h = 8 um. This number is not this repository's physics; it is your assumption arithmetic, carried so the timescales below are comparable to your tables.",
-        "evidence": "assumed",
-        "origin": "am",
-        "tier": 3
+        "source": "gamma_0 x 1.211, where 1.211 is YOUR declared Faxen factor at h = 8 um. This number is not this repository's physics; it is your assumption arithmetic, carried so the timescales below are comparable to your tables. [relabelled 2026-09-15: evidence was `assumed`, which left the fact that this number came home visible only to a reader of this prose. R5b now requires `round_trip` for a consumer-origin quantity. The value is unchanged -- this corrects a label, not a number.]",
+        "evidence": "round_trip",
+        "origin": "am"
       },
       {
         "symbol": "l_k",

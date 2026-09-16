@@ -89,7 +89,7 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 3,
-          "description": "BD tier. Optional on the wire: the importer derives it from `evidence` via README table T1."
+          "description": "NON-NORMATIVE. `evidence` is authoritative; the importer derives its own tier and ignores this. Kept only because four rounds already ship it. It is not derivable in general -- `computed` inherits the worst tier of its inputs, which the wire does not carry -- and in practice it drifted: across r1-r5 a `computed` value ships as tier 1, 2 AND 3, and the tier-2 cases originated in r1 and propagated into three later rounds by copying. Rule R8 warns when a shipped tier is not reachable from `evidence` via README table T1. Do not add it to new documents."
         },
         "uncertainty": {
           "type": "object",

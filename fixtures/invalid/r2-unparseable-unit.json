@@ -11,7 +11,8 @@
   "plan_ref": {
     "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md",
     "hash": "sha256:58cfc405231a2970",
-    "note": "status: planned. The plan does not cross; only this ask does."
+    "note": "status: planned. The plan does not cross; only this ask does.",
+    "rev": "9f971a8"
   },
   "claim": "On a six-rung height ladder (h = 3.0-10 um, one bead at a = 2.475 um), combining the drag slope x_eq(v) with the equipartition stiffness kT/var(x) separates gamma_corr(h) from alpha, and a least-squares fit of gamma(dz) = gamma_0/(1 - 9a/(16(dz + h0))) recovers the unknown focal-plane-to-trap offset h0 to +/-0.195 um and gamma_bulk to 2.1 %, unbiased.",
   "answering_quantity": {
@@ -79,8 +80,7 @@
       "unit": "pN/µm",
       "source": "trapping/goa.py force-curve --dial 1 at 100x Oil (NA 1.45 -> effective 1.325, n_bead 1.5715, n_medium 1.3245), a = 2.475 um. A MODEL value, not a measurement: the model predicts exactly alpha = 8.68/a and nothing else, which is what the run tests.",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "h_nominal",
@@ -209,8 +209,7 @@
       "unit": "Hz",
       "source": "AM gate table at a = 2.475 um, h = 8 um. NON-BINDING: derive your own before reading this.",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "gamma_corr_over_gamma_0",
@@ -218,8 +217,7 @@
       "unit": "dimensionless",
       "source": "Faxen at h = 8 um, s = 9a/(16h) = 0.174",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "sqrt_kT_over_alpha",
@@ -227,8 +225,7 @@
       "unit": "nm",
       "source": "Thermal amplitude at alpha = 3.5 pN/um",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "v_drive",
@@ -236,8 +233,7 @@
       "unit": "um/s",
       "source": "Velocity giving x_eq = 0.15a at h = 8 um",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     },
     {
       "symbol": "blur_on_var_x",
@@ -245,8 +241,7 @@
       "unit": "percent",
       "source": "2*D*t_exp/3 at 0.45 ms, h = 8 um",
       "evidence": "computed",
-      "origin": "am",
-      "tier": 2
+      "origin": "am"
     }
   ],
   "out_of_scope": [

@@ -121,6 +121,32 @@ Two properties matter more than the file format:
   citation. Both repositories already have supersession machinery
   (`superseded_by` / `corrected_by`); use it.
 
+## `evidence` 가 권위이고 `tier` 는 비규범이다
+
+보내는 쪽은 `evidence` 만 쓴다. `tier` 는 **받는 쪽이 유도**하고, 와이어에 실린 값은
+무시된다. 일반적으로 유도 자체가 불가능하기 때문이다 — `computed` 는 입력 중 최악
+tier 를 상속하는데 와이어는 입력을 나르지 않는다. 그리고 실제로 조용히 갈라졌다:
+r1–r5 에서 `computed` 한 클래스가 tier 1·2·3 **세 값 전부**로 실렸고, tier 2 인 것들은
+전부 r1 의 여섯 값에서 나와 이후 세 라운드로 복사되어 번졌다. BD 척도의 tier 2 는
+"문헌, 미검증" 인데 `trapping/goa.py` 의 모델 출력은 그게 아니다 — **보내는 쪽이 받는
+쪽의 어휘를 다른 뜻으로 쓰고 있었고 아무도 검사하지 않았다.**
+
+R8 이 유도 불가능한 tier 에 경고한다. 새 문서에는 `tier` 를 넣지 말 것. T1 은
+`validate.py` 의 `T1` 딕셔너리가 유일한 사본이고, `computed` 가 `{1, 3}` 인 것은
+범위가 실제로 범위이기 때문이다.
+
+## 한 엔트리에 증거가 여러 종류인 것이 정상이다
+
+`evidence_class` 하나로는 거짓말이 된다. r1 의 수입 엔트리는 `d`·`pixel_size`(진짜
+측정)와 `T`(가정 — AM 자신의 P3 이 온도계를 기다리며 막고 있다), `eta`(그 가정에서
+계산), `k_t`(모델 출력)를 **같이** 담고 있었는데 frontmatter 는 `measured` 라고 적혀
+있었다. 본문 표는 맞게 적혀 있었지만, **인용이 표면에 드러내는 것은 경로와
+frontmatter 이고 본문 표가 아니다.**
+
+`evidence_classes: {symbol: evidence}` 맵을 쓰고, `evidence_class` 는 그 맵의 **최악**을
+적는다 (R10, 순서: measured = handbook < computed < simulated = round_trip < assumed).
+최악만 남기고 맵을 버리면 `d` 와 `pixel_size` 가 진짜 측정이라는 사실이 사라진다.
+
 ## R4 는 status 를 보지 않는다
 
 미해결 가정은 **미해결이라고 선언**되어야 한다 — "문서가 draft 여야 한다"가 아니다.

@@ -42,7 +42,7 @@
         "assumed",
         "round_trip"
       ],
-      "description": "Surfaced at citation time. A simulated f_c must never sit in kb/calibrations/, which means 'measured on this instrument'."
+      "description": "Surfaced at citation time. A simulated f_c must never sit in kb/calibrations/, which means 'measured on this instrument'. When `evidence_classes` is present this must equal the worst class in it, by the severity order measured = handbook < computed < simulated = round_trip < assumed. Checked by R10."
     },
     "may_be_gate_threshold": {
       "type": "boolean",
@@ -93,6 +93,24 @@
       "type": "string",
       "format": "date",
       "description": "Index metadata for the importing repository, same reason as `question`. Distinct from `imported`: `date` is the entry's own date in its KB, `imported` is when it crossed."
+    },
+    "evidence_classes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "enum": [
+          "measured",
+          "handbook",
+          "computed",
+          "simulated",
+          "assumed",
+          "round_trip"
+        ]
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "description": "Per-value evidence, keyed by symbol. The mixed case is the NORMAL case: r1's import carries d and pixel_size (genuinely measured) alongside T (assumed, AM's own P3 blocks on a thermometer), eta (computed from that assumed T) and k_t (a model output). A single top-level class either lies or throws away the fact that two of them really are measurements. When this is present, `evidence_class` MUST be the worst entry in it (rule R10) -- so a citation can never read better than the entry's weakest number."
     }
   }
 }

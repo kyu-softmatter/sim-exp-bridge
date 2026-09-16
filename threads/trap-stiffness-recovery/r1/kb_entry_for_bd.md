@@ -6,7 +6,19 @@ id: trap-stiffness-recovery.r1
 origin: am
 source_ref: "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md"
 source_hash: "sha256:58cfc405231a2970"
-evidence_class: measured
+evidence_class: assumed          # the WORST in evidence_classes below, per R10
+# C4: one class for an entry holding four kinds of evidence was a lie the
+# frontmatter told while the body table told the truth. `d` and `pixel_size`
+# really are measured; `T` is not, and AM's own precondition P3 blocks on a
+# thermometer. A citation surfaces this class and the path, not the table.
+evidence_classes:
+  d: measured
+  rho_particle: handbook
+  pixel_size: measured
+  T: assumed
+  eta: computed          # from the assumed T, so it inherits
+  k_t: computed          # a model output from trapping/goa.py
+  h_nominal: assumed     # a piezo reading, not an absolute height
 may_be_gate_threshold: false
 derived_from: []
 thread: trap-stiffness-recovery/r1

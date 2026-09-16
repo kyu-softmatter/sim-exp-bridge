@@ -74,6 +74,25 @@ def parse_unit(unit: str) -> tuple[bool, str]:
     return True, ""
 
 
+#: README table T1, in code so there is one copy. A range where the mapping
+#: genuinely is a range: `computed` inherits the worst tier of its inputs, and the
+#: wire does not carry the inputs, so 1-3 are all reachable and nothing narrower
+#: can be checked. This is why `tier` is non-normative rather than validated.
+T1 = {
+    "measured": {0},
+    "handbook": {0},
+    "computed": {1, 3},        # 1 from measured inputs, 3 inherited from an assumed one
+    "assumed": {3},
+    "simulated": set(),        # not admissible as a tier at all -- see C3
+    "round_trip": set(),
+}
+
+#: How bad a class is, for picking the worst in an entry (rule R10). A citation
+#: must never read better than the entry's weakest number.
+SEVERITY = {"measured": 0, "handbook": 0, "computed": 1,
+            "simulated": 2, "round_trip": 2, "assumed": 3}
+
+
 class Report:
     def __init__(self, path: Path):
         self.path = path
@@ -278,8 +297,58 @@ def r5b_round_trip_labels(doc: dict, rep: Report) -> None:
     walk(doc, "")
 
 
+def r8_tier_not_derivable(doc: dict, rep: Report) -> None:
+    """`tier` is non-normative, so this warns rather than refusing.
+
+    It exists because the field drifted silently: across r1-r5 a `computed` value
+    ships as tier 1, 2 and 3, and every tier-2 case descends from six values in
+    r1 that were copied forward into three later rounds. Tier 2 in BD's scale
+    means "literature, unverified", which is not what a model output from
+    trapping/goa.py is -- the sender was using the receiver's vocabulary with a
+    different meaning, and nothing checked it.
+    """
+    def walk(node, where):
+        if isinstance(node, dict):
+            ev, tier = node.get("evidence"), node.get("tier")
+            if ev in T1 and isinstance(tier, int):
+                allowed = T1[ev]
+                if not allowed:
+                    rep.warn("R8", f"{where} ({node.get('symbol')}) is "
+                                   f"evidence: {ev!r}, which has no tier at all; "
+                                   f"tier {tier} is ignored.")
+                elif tier not in allowed:
+                    rep.warn("R8", f"{where} ({node.get('symbol')}) ships tier "
+                                   f"{tier} but evidence: {ev!r} reaches only "
+                                   f"{sorted(allowed)} via T1. Ignored -- `evidence` "
+                                   "is authoritative. Drop `tier` rather than "
+                                   "correcting it.")
+            for k, v in node.items():
+                walk(v, f"{where}.{k}")
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                walk(v, f"{where}[{i}]")
+
+    walk(doc, "")
+
+
 # -------------------------------------------------------------- R6: hash drift
-def r6_hashes(doc: dict, rep: Report, manifest: dict | None) -> None:
+def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
+              path: Path | None = None) -> None:
+    """Positive fixtures are exempt, and that exemption is the real fix.
+
+    `fixtures/valid/c6-correction-with-unknown.json` guards R4. Its refs are a
+    frozen snapshot, so coupling them to the live manifest meant a legitimate
+    upstream change -- relabelling one `evidence` field in r2 -- turned the CI
+    entry point red for a reason that had nothing to do with the rule under
+    guard. The BD session repaired the hash by hand and flagged it; the repair
+    was right triage and the coupling was my defect.
+
+    `fixtures/invalid/r6-stale-source-hash.json` is NOT exempt: it is the test
+    that R6 still fires.
+    """
+    if path is not None and "fixtures/valid/" in path.as_posix():
+        rep.warn("R6", "skipped: positive fixtures carry frozen snapshots by design.")
+        return
     if manifest is None:
         rep.warn("R6", "no hashes.json -- upstream drift unchecked")
         return
@@ -388,6 +457,24 @@ def validate_kb_entry(path: Path, manifest: dict | None) -> Report:
                 rep.err("R6", f"{ref} has moved upstream ({h} -> {known}). "
                               "Supersede this entry; do not edit it in place.")
 
+    # R10 -- one class for an entry holding several kinds of evidence.
+    classes = fm.get("evidence_classes")
+    if isinstance(classes, dict) and classes:
+        worst = max(classes.values(), key=lambda c: SEVERITY.get(c, 0))
+        declared = fm.get("evidence_class")
+        if SEVERITY.get(declared, -1) < SEVERITY.get(worst, 0):
+            bad = [k for k, v in classes.items() if v == worst]
+            rep.err("R10", f"evidence_class: {declared!r} is better than the worst "
+                           f"entry in evidence_classes ({worst!r}, on "
+                           f"{', '.join(sorted(bad))}). The frontmatter is what a "
+                           "citation surfaces; prose in the body does not reach a "
+                           "reader who only sees the path and the class.")
+    elif fm.get("evidence_class") in ("measured", "handbook"):
+        rep.warn("R10", f"evidence_class: {fm.get('evidence_class')!r} with no "
+                        "`evidence_classes` map. If any value in this entry is "
+                        "assumed, computed or a model output, this reads better than "
+                        "the entry is -- add the map.")
+
     r7_confirmed_by(fm, rep)
 
     # A foreign entry is never a gate threshold by default.
@@ -416,7 +503,8 @@ def validate(path: Path, manifest: dict | None) -> Report:
     r4_draft(doc, rep)
     r5_circular(doc, rep)
     r5b_round_trip_labels(doc, rep)
-    r6_hashes(doc, rep, manifest)
+    r8_tier_not_derivable(doc, rep)
+    r6_hashes(doc, rep, manifest, path)
     r7_confirmed_by(doc, rep)
     return rep
 
