@@ -354,6 +354,38 @@ def r12_gap_kind(doc: dict, rep: Report) -> None:
                             "`nobody` is the honest owner.")
 
 
+def r13_ref_is_a_path(doc: dict, rep: Report) -> None:
+    """`@r<N>` in a ref string masks R6's own revision branch.
+
+    Before R6 resolved revisions, embedding `@r<N>` in the ref was the only way
+    to cite a suffixed manifest key. It worked, and it cost two things: the ref
+    stopped being a path, and the citation then matched by exact key -- so R6's
+    revision branch fired on nothing and looked healthy. BD found this in its own
+    r8 after the branch landed, which is why the branch needed inline checks to
+    be observably alive.
+
+    A warning and not an error, because the documents carrying it are sealed and
+    a cited document is not edited. The warning standing forever is the record of
+    when the convention changed.
+    """
+    def walk(node, where):
+        if isinstance(node, dict):
+            r = node.get("ref")
+            if isinstance(r, str) and "@" in r:
+                rep.warn("R13", f"{where}.ref is {r!r} -- `@r<N>` is a manifest key "
+                                "form, not part of a path. R6 resolves revisions "
+                                "itself now, so the ref should be the path and the "
+                                "hash should name the revision. Leave sealed "
+                                "documents alone; do not write new ones this way.")
+            for k, val in node.items():
+                walk(val, f"{where}.{k}")
+        elif isinstance(node, list):
+            for i, val in enumerate(node):
+                walk(val, f"{where}[{i}]")
+
+    walk(doc, "")
+
+
 # -------------------------------------------------------------- R6: hash drift
 def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
               path: Path | None = None) -> None:
@@ -684,6 +716,7 @@ def validate(path: Path, manifest: dict | None) -> Report:
     r5b_round_trip_labels(doc, rep)
     r8_tier_not_derivable(doc, rep)
     r12_gap_kind(doc, rep)
+    r13_ref_is_a_path(doc, rep)
     r6_hashes(doc, rep, manifest, path)
     r7_confirmed_by(doc, rep)
     return rep

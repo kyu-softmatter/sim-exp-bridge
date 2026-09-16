@@ -32,7 +32,8 @@
       "properties": {
         "ref": {
           "type": "string",
-          "pattern": "^(am|bd):[^\\s]+$"
+          "pattern": "^(am|bd):[^\\s]+$",
+          "description": "A path, and only a path. The revision belongs in `rev` and the hash names it; `@r<N>` is a MANIFEST key form, not part of a ref. Putting it in the ref string was the only way to reach a suffixed key before R6 resolved revisions itself, and it had a cost: the ref stopped being a path, and it made the citation match by exact key, which silently bypassed R6's revision branch. R13 warns."
         },
         "field": {
           "type": "string",
