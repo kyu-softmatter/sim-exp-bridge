@@ -800,9 +800,45 @@ fired correctly, and its **field of view** excluded the case.
 **The defence AM used is the transferable part: refuse the form rather than
 grow the parser.** A plan has one linking style; supporting two is two things
 to keep checked, and refusing the second keeps the check's **coverage equal to
-its claim**. It costs nothing while no plan uses it, and the test is named for
-the failure rather than for the shape. Growing the parser would have widened
-the field of view once; refusing widens it permanently.
+its claim**. The test is named for the failure rather than for the shape.
+Growing the parser would have widened the field of view once; refusing widens
+it permanently.
+
+**But the phrasing hides a cost.** Refusing keeps coverage equal to the claim
+by **narrowing the allowed input**, not by widening the check. That is free
+only while nothing uses the refused form — no plan writes reference-style
+links — and it is not free in general. Had the form been in use, "refuse" would
+have meant "break every existing document", and the honest move would be to
+widen and then state what the wider field of view still excludes. So:
+
+> **Refuse where it is cheap, widen where it is not, and in both cases write
+> down the remaining boundary.**
+
+### The tell: a comment that names a boundary and guards nothing
+
+Pattern 3 is hard to find because a passing check gives no prompt. It has a
+marker that is **greppable in a way the pattern itself is not** — a comment of
+the form *"X is not used here, so this does not handle X"*. AM wrote exactly
+that comment in the same commit as the rule, where it read as diligence: it
+names the gap, after all. What it records is that the author **saw the boundary
+and left it unguarded**, with nothing that fails the day the assumption
+expires. Three of the day's instances had a note like that nearby.
+
+**The refinement that makes the grep usable**: the tell is not a comment naming
+a boundary — those are good and this file is full of them. It is a comment
+naming a boundary **with nothing that fails when the assumption expires**. Run
+against this repository in three passes with different patterns, since one
+regex declaring a repository clean is Pattern 3 checking for Pattern 3:
+
+- `validate.py:48` — *"R2. A deliberately small unit vocabulary … not a unit
+  system"* reads exactly like the tell **and is not one**: R2 refuses an
+  unlisted token, so the boundary is enforced by the refusal that names it.
+- `validate.py:789` (`advanced` deliberately not an error), `:612` (R9's
+  measured-only namespace), `:1288` (`bd` absent on purpose, to exercise
+  `no_root`) — each names a boundary that some rule or fixture holds.
+
+Nothing here matched. The near-misses are the useful output: they are what the
+guarded form of the same sentence looks like.
 
 ### Checkability beats care
 
