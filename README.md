@@ -531,11 +531,30 @@ afternoon, both times correctly, for two different reasons:
 The second is the durable one, and it has a design answer rather than a
 procedural one: **partition a derived file by owner so that two writers never
 compute the same field.** `hashes.json` here is exactly such a file — two
-sessions append to it every round — and it has never conflicted on content,
-because the ownership rule assigns keys by prefix (`am:` to one side, `bd:` to
-the other). The suffixed-key convention prevents *cascades*; the prefix
-partition prevents *conflicts*. They are different problems and both needed
-solving.
+sessions append to it every round — and the ownership rule assigns keys by
+prefix (`am:` to one side, `bd:` to the other).
+
+That claim was checked rather than assumed, and it needed a correction. Across
+13 commits touching the file from both sides, 31 keys split `am:` 13 / `bd:` 18,
+**no conflict marker was ever committed** — but the prefix partition only
+prevents a **semantic** conflict, in that neither side can overwrite the other's
+key. It does not prevent a **textual** one: in insertion order both sides append
+to the end of the same JSON object and land on adjacent lines, which git
+conflicts on even though the keys are disjoint. It had not happened because the
+writers were never concurrent — serialisation, not design.
+
+Sorting the ref keys fixes it in one line: `am:*` and `bd:*` then occupy
+disjoint contiguous regions, so an append by each side touches a different part
+of the file. `--selftest` now refuses an unsorted manifest, because otherwise
+the fix is a convention that rots.
+
+So there are **three axes**, and only the first two were deliberate:
+
+| convention | prevents a collision in |
+|---|---|
+| suffixed keys `<ref>@r<N>` | **time** — a later revision does not invalidate an earlier citation |
+| prefix partition `am:` / `bd:` | **ownership** — neither side computes the other's field |
+| sorted keys | **the file** — two appends do not land on the same line |
 
 ### Pattern 2 — a check that exists and is not wired to what it describes
 

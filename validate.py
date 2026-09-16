@@ -813,6 +813,31 @@ def _coverage_checks(expected: dict) -> list[str]:
     for rule in sorted(err_rules - fixture_rules, key=lambda r: int(r.strip("Rb"))):
         out.append(f"{rule} can raise an error and has no negative fixture")
 
+    # The manifest must stay sorted, and this is the check that keeps it sorted.
+    # The prefix partition (am: keys to one side, bd: to the other) prevents a
+    # SEMANTIC conflict -- neither side can overwrite the other's key. It does
+    # not prevent a TEXTUAL one: in insertion order both sides append to the end
+    # of the same JSON object and land on adjacent lines, which git conflicts on
+    # even though the keys are disjoint. That it never happened was the writers
+    # being serialised, not the design. Sorted, `am:*` and `bd:*` occupy disjoint
+    # contiguous regions and an append by each touches a different part of the
+    # file. Documentation keys (`_`-prefixed) stay first, in their own order.
+    mf_path = ROOT / "hashes.json"
+    if mf_path.exists():
+        raw = json.loads(mf_path.read_text())
+        refs = [k for k in raw if not k.startswith("_")]
+        if refs != sorted(refs):
+            first = next(i for i, (a, b) in enumerate(zip(refs, sorted(refs))) if a != b)
+            out.append(f"hashes.json is not sorted (first divergence at index "
+                       f"{first}: {refs[first]!r}). Sort the ref keys -- unsorted, "
+                       "both sides append to the same last line and collide "
+                       "textually even though the keys are disjoint.")
+        doc_after_ref = [i for i, k in enumerate(raw) if k.startswith("_")
+                         and any(not j.startswith("_") for j in list(raw)[:i])]
+        if doc_after_ref:
+            out.append("hashes.json has a `_`-prefixed documentation key after a "
+                       "ref key; keep them at the top.")
+
     threads = list(ROOT.glob("threads/*/r*/ask_*.json"))
     valid = list((ROOT / "fixtures/valid").glob("*.json"))
     if not threads:
