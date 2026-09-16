@@ -22,3 +22,22 @@ jobs:
       # dependency here fails the job rather than quietly disabling R1.
       - run: pip install jsonschema referencing PyYAML
       - run: python3 validate.py --selftest
+
+# WHAT THIS JOB DOES NOT COVER, stated rather than implied -- BD's ci.yml does
+# the same and it is the half that keeps a green tick honest.
+#
+# * **Only ubuntu-latest.** Development happens on darwin-arm64, so "selftest
+#   clean locally" and "CI green" are two platforms and neither implies the
+#   other. The risk here is small (stdlib plus three pure-Python packages, and
+#   the two path tests use `as_posix()` and a component match) but it is not
+#   zero and it is not checked.
+# * **Unpinned dependency versions.** `pip install jsonschema referencing
+#   PyYAML` takes whatever is current, so a schema-library change can turn this
+#   red without any commit here. That is deliberate: a pin would hide the
+#   change until somebody bumped it.
+# * **Nothing about the two agent repositories.** Refs beginning `am:` and
+#   `bd:` are verified against `hashes.json` only -- R6 checks a recorded hash,
+#   never a file on disk. A `rev` pointing at nothing is invisible here, which
+#   is the fifth entry in the README's pattern table and remains unfixed on
+#   purpose: the check would have to couple this repository to two external
+#   layouts.

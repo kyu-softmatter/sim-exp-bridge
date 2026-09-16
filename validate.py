@@ -792,6 +792,38 @@ def _r6_branch_checks() -> list[str]:
     return failures
 
 
+def _coverage_checks(expected: dict) -> list[str]:
+    """Refuse to pass on nothing, and refuse to let an error rule go unfixtured.
+
+    BD's ci.yml carries the same guard for a shell loop -- `if [ "$checked"
+    -eq 0 ]; then echo "::error::no SEALED.sha256 found -- this job silently
+    passed on nothing"` -- because a seal job that finds no seals is green.
+    This one was green with every fixture and every thread deleted, and printed
+    "0 fixtures, all pinned", which is vacuously true.
+
+    The second half makes permanent the audit that found R0, R1, R9 and R10: any
+    rule that can raise an error must have a negative fixture. Run by hand once,
+    it is a one-off; run here, a new error rule cannot arrive unfixtured.
+    """
+    src = (ROOT / "validate.py").read_text()
+    err_rules = set(re.findall(r'rep\.err\("(R\d+b?)"', src))
+    fixture_rules = {n.split("-")[0].upper() for n in expected}
+
+    out: list[str] = []
+    for rule in sorted(err_rules - fixture_rules, key=lambda r: int(r.strip("Rb"))):
+        out.append(f"{rule} can raise an error and has no negative fixture")
+
+    threads = list(ROOT.glob("threads/*/r*/ask_*.json"))
+    valid = list((ROOT / "fixtures/valid").glob("*.json"))
+    if not threads:
+        out.append("no thread documents found -- this run verified nothing")
+    if not valid:
+        out.append("no positive fixtures found -- loosenings are unguarded")
+    if not expected:
+        out.append("expected.json is empty -- no failure identities are pinned")
+    return out
+
+
 def selftest() -> int:
     """A rule nobody can see fail is a rule that has quietly stopped existing.
 
@@ -829,6 +861,16 @@ def selftest() -> int:
             meta.append(f"expected.json names {name}, which is not a fixture")
 
     bad = 0
+    coverage = _coverage_checks(expected)
+    if coverage:
+        bad += 1
+        print("BAD   coverage:")
+        for c in coverage:
+            print(f"          {c}")
+    else:
+        print(f"ok    coverage  (every error rule has a fixture; "
+              f"{len(list(ROOT.glob('threads/*/r*/ask_*.json')))} thread documents)")
+
     if meta:
         bad += 1
         print("BAD   expected.json meta-checks:")
