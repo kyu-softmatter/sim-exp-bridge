@@ -397,8 +397,27 @@ def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
 
     walk(doc)
     for ref, h in seen:
+        # A citation is FROZEN and a manifest is LIVE. Accept any registered
+        # revision of a ref, not only the unsuffixed one.
+        #
+        # Without this, adding metadata to an already-cited document cascades
+        # without limit. It happened: 4652273 added `gaps[].kind` to r2, which
+        # moved r2's hash, which broke r8; refreshing the unsuffixed key broke
+        # r4, which cites r2; refreshing r4 broke r5 and r7, which cite r4. The
+        # refresh is the obvious move and it is the wrong one -- each repair
+        # invalidates the next citation down. The `@r<N>` convention already in
+        # this manifest is the right answer, and R6 now reads it.
+        candidates = {k: v for k, v in manifest.items()
+                      if k == ref or k.startswith(f"{ref}@")}
         known = manifest.get(ref)
-        if known is None:
+        if candidates and h in candidates.values():
+            matched = [k for k, v in candidates.items() if v == h]
+            if ref not in matched:
+                rep.warn("R6", f"{ref} matches {matched[0]} rather than the "
+                               "unsuffixed key -- a citation frozen at an earlier "
+                               "revision, which is expected and fine.")
+            continue
+        if not candidates:
             rep.warn("R6", f"{ref} is not in hashes.json -- cannot check drift")
         elif PLACEHOLDER in known.lower() or PLACEHOLDER in h.lower():
             rep.err("R6", f"{ref} is declared UNKNOWN on purpose -- the manifest "
@@ -406,10 +425,14 @@ def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
                           "nobody guessed a hash. It still blocks, because the "
                           "provenance claim is unverified. Compute the hash, or "
                           "drop the ref until the artefact exists.")
-        elif known != h:
-            rep.err("R6", f"{ref} has moved upstream: document cites {h}, "
-                          f"manifest has {known}. Every requirement resting on "
-                          "it is stale. Supersede the import, do not edit it.")
+        elif known != h or known is None:
+            regs = ", ".join(f"{k.split('@')[1] if '@' in k else 'unsuffixed'}={v}"
+                             for k, v in sorted(candidates.items()))
+            rep.err("R6", f"{ref} has moved upstream: document cites {h}, and no "
+                          f"registered revision matches ({regs}). Register the "
+                          f"revision this document was written against as "
+                          f"{ref}@r<N> -- do NOT refresh the unsuffixed key, which "
+                          "invalidates every citation below it in turn.")
 
 
 # ------------------------------------------------------- R7: confirmed_by is human
@@ -666,14 +689,64 @@ def validate(path: Path, manifest: dict | None) -> Report:
     return rep
 
 
+def _r6_branch_checks() -> list[str]:
+    """R6 has four branches and three of them fire nowhere in the live thread.
+
+    A rule nobody can see fail has quietly stopped existing -- and the same is
+    true of a branch. The revision-matching branch exists because a cascade
+    happened once and must not happen again, so it has to be observably alive
+    even while every current citation matches an unsuffixed key.
+    """
+    REF = "bd:doc"
+    cases = [
+        ("unsuffixed match",
+         {REF: "sha256:aaaa1111"}, "sha256:aaaa1111", None, None),
+        ("suffixed match",
+         {REF: "sha256:bbbb2222", f"{REF}@r8": "sha256:aaaa1111"},
+         "sha256:aaaa1111", None, "matches"),
+        ("no revision matches",
+         {REF: "sha256:bbbb2222", f"{REF}@r8": "sha256:cccc3333"},
+         "sha256:aaaa1111", "has moved upstream", None),
+        ("named refusal",
+         {REF: "sha256:PLACEHOLDER"}, "sha256:aaaa1111",
+         "declared UNKNOWN on purpose", None),
+        ("unregistered ref",
+         {}, "sha256:aaaa1111", None, "not in hashes.json"),
+    ]
+    failures = []
+    for name, manifest, cited, want_err, want_warn in cases:
+        doc = {"plan_ref": {"ref": REF, "hash": cited}}
+        rep = Report(Path(f"<{name}>"))
+        r6_hashes(doc, rep, manifest, None)
+        got_err = " ".join(rep.errors)
+        got_warn = " ".join(rep.warnings)
+        if want_err and want_err not in got_err:
+            failures.append(f"R6/{name}: expected error {want_err!r}, got {got_err!r}")
+        if not want_err and rep.errors:
+            failures.append(f"R6/{name}: unexpected error {got_err!r}")
+        if want_warn and want_warn not in got_warn:
+            failures.append(f"R6/{name}: expected warning {want_warn!r}, got {got_warn!r}")
+    return failures
+
+
 def selftest() -> int:
     """A rule nobody can see fail is a rule that has quietly stopped existing."""
     global STRICT
     STRICT = True
     print(f"interpreter: {sys.executable}")
+
+    bad = 0
+    branch_failures = _r6_branch_checks()
+    if branch_failures:
+        bad += 1
+        print("BAD   R6 branch checks:")
+        for f in branch_failures:
+            print(f"          {f}")
+    else:
+        print("ok    R6 branch checks  (5 cases: unsuffixed, suffixed, none, "
+              "placeholder, unregistered)")
     mf = ROOT / "hashes.json"
     manifest = json.loads(mf.read_text()) if mf.exists() else None
-    bad = 0
 
     for p in sorted(ROOT.glob("threads/**/ask_*.json")) + \
             sorted(ROOT.glob("threads/**/kb_entry_for_*.md")) + \
