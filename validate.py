@@ -345,7 +345,15 @@ def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
 
     `fixtures/invalid/r6-stale-source-hash.json` is NOT exempt: it is the test
     that R6 still fires.
+
+    A manifest value of `sha256:PLACEHOLDER` is a *named refusal*, not a
+    mismatch. Somebody wrote down that the hash is not known yet rather than
+    guessing one -- the same instinct as `BLOCKED` over an invented number on
+    the AM side, or refusing to run a card with no runner on the BD side. It
+    still fails, because an unverified provenance claim is unverified; what
+    changes is that the output says which of the two it is.
     """
+    PLACEHOLDER = "placeholder"
     if path is not None and "fixtures/valid/" in path.as_posix():
         rep.warn("R6", "skipped: positive fixtures carry frozen snapshots by design.")
         return
@@ -369,6 +377,12 @@ def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
         known = manifest.get(ref)
         if known is None:
             rep.warn("R6", f"{ref} is not in hashes.json -- cannot check drift")
+        elif PLACEHOLDER in known.lower() or PLACEHOLDER in h.lower():
+            rep.err("R6", f"{ref} is declared UNKNOWN on purpose -- the manifest "
+                          f"carries {known}. This is a named refusal, not drift: "
+                          "nobody guessed a hash. It still blocks, because the "
+                          "provenance claim is unverified. Compute the hash, or "
+                          "drop the ref until the artefact exists.")
         elif known != h:
             rep.err("R6", f"{ref} has moved upstream: document cites {h}, "
                           f"manifest has {known}. Every requirement resting on "
