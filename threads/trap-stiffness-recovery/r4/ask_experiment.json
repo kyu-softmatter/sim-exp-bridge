@@ -276,8 +276,8 @@
     {
       "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json",
       "hash": "sha256:683eae8f34a6bef9",
-      "rev": "c288df6",
-      "note": "the document this corrects; its status is now `corrected`."
+      "rev": "b96092b",
+      "note": "the document this corrects; its status is now `corrected`. \u26a0 rev corrected 2026-09-16: this line read `c288df6`, where r2's blob is 2bbab020. The two halves of the citation named different moments and R6 passed it, because it compares the hash against hashes.json and never opens the file; found by --resolve. The hash is right and is unchanged -- 683eae8f is r2 from b96092b onward, and b96092b is the commit that refreshed this hash during the r2 cascade and left the rev behind. The pair was inconsistent before that too: 6acf925 wrote hash d20427218c5cba73 against rev c288df6, where r2 was 2bbab020 -- d2042721 is r2 as it stood in the WORKING TREE, modified and uncommitted in that same commit. A hash taken from the working tree with a rev taken from HEAD is the root cause, and it is the third distinct way a rev has gone wrong in this thread (r8: a rev copied from a note, where the path did not exist; r9: a rev predating the file)."
     },
     {
       "ref": "bd:verify/verify_detector_model.py",

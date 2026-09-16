@@ -325,9 +325,27 @@ unresolvable, and both real**:
 | `rev_absent` | `r8/kb_entry_for_am.md` cites `bd:verify/verify_ladder_tolerance.py` at `07d1048`, **where the path does not exist**. Its `.json` twin was corrected in `813fcf2`; this one was not. |
 | `rev_mismatch` | `r4/ask_experiment.json` cites r2 at `rev c288df6` with `hash 683eae8f`. At `c288df6` the blob is `2bbab020`; `683eae8f` is that file at `b96092b`, **four commits later**. The two halves of the citation name different moments, and R6 passed it because the hash is a registered key. |
 
-Neither is repaired here. A cited document is not edited by the side that did
-not write it, and the `.md` fix also moves a hash AM's import registers — the
-owning session does that, which is the same boundary `confirmed_by` draws.
+A third arrived the day after, in **the round written immediately after the
+resolver was built to catch this**: r9 pins r7 at `f2e5f94`, a commit that
+predates r7's own. Three instances, three different ways to get a `rev` wrong
+— copied from a note, taken from the working tree, and predating the file —
+and all three had a correct content hash throughout, which is why nothing else
+saw them.
+
+**All three are now corrected, each by the side that owns the document**
+(`2671b7a`, `4082e86`, and r4 here). A cited document is not edited by the side
+that did not write it: the AM half was corrected by AM, and the `.md` fix also
+moved a hash AM's import registers. Same boundary `confirmed_by` draws.
+
+r4's is the instructive one, because its root cause is not "somebody typed the
+wrong sha". At `6acf925` r4 recorded `hash d2042721` — which is r2 **as it
+stood in the working tree, modified and uncommitted in that same commit** —
+against `rev c288df6`, which was HEAD. A hash from the working tree and a rev
+from HEAD is a pair that can never agree, and it survived a later hash refresh
+at `b96092b` that moved the hash and left the rev. The correction keeps the
+hash and moves the rev to `b96092b`, where that content actually is; the
+edited r4 is registered as `@rev-corrected` and the unsuffixed key stays where
+r5 and r7 point.
 
 **What it cannot do, stated rather than implied:**
 
@@ -335,10 +353,12 @@ owning session does that, which is the same boundary `confirmed_by` draws.
   answer must not depend on where somebody cloned. Unconfigured is reported as
   `no_root` and counted, and a run that resolved *nothing* exits non-zero —
   "0 checked, 0 failed" is the vacuous pass this repository keeps writing down.
-- **Rootless, it still covers `<side>:bridge/...`** — those paths live here, and
-  that is 11 resolutions with no configuration. The `rev_mismatch` above is one
-  of them, so it is reachable from CI.
-- **8 citations carry no `rev` at all.** They resolve to nothing by
+- **Rootless, it still covers `<side>:bridge/...`** — those paths live here, so
+  that is 11 resolutions with no configuration, and **it is wired into CI**
+  (`python3 validate.py --resolve`, no arguments). Two of the three findings
+  above were reachable that way. It was wired only once they were corrected:
+  turning the job red on another side's sealed document is that side's call.
+- **10 citations carry no `rev` at all.** They resolve to nothing by
   construction; `no_rev` counts them instead of calling the run clean.
 - **A directory ref had no recipe, and now has a declared one.** A directory
   has no bytes of its own, so `bd:runs/trap-2d-5um__a5ef4f45d589` was reported
@@ -957,11 +977,14 @@ Recorded as trades rather than as claims, at BD's request:
 - ~~**Here: a `rev` is never resolved.**~~ **Closed 2026-09-16** by R6's
   [resolve branch](#the-resolve-branch--r6-opens-the-file), after a second
   instance appeared — the `.md` twin of the document whose `.json` had just
-  been corrected by hand. What replaces it is smaller and still open: **two
-  real unresolvable citations**, **10 citations with no `rev`**, and the branch
-  is **not in CI** even though its rootless half would cover one of the two
-  findings. The directory-ref recipe that was open here is
-  [closed](#the-resolve-branch--r6-opens-the-file) — declared, not invented.
+  been corrected by hand. A third followed, in the round written immediately
+  after the branch existed. What replaces it is smaller and still open:
+  **10 citations with no `rev`**, which resolve to nothing by construction and
+  are counted rather than called clean. The three unresolvable citations it
+  found are corrected, the directory-ref recipe is declared rather than
+  invented, and the rootless half is
+  [in CI](#the-resolve-branch--r6-opens-the-file); the `am:`/`bd:` half still
+  cannot run there and is reported `no_root`, not skipped.
 
 ### And the gate was not pointed at the thing it was built for
 

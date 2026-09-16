@@ -22,6 +22,12 @@ jobs:
       # dependency here fails the job rather than quietly disabling R1.
       - run: pip install jsonschema referencing PyYAML
       - run: python3 validate.py --selftest
+      # R6's resolve branch, rootless. It resolves every
+      # `<side>:bridge/...` ref -- path AND cited `rev` -- against this
+      # checkout: 11 of them, no configuration, and it exits non-zero if
+      # it resolved nothing rather than reporting a vacuous pass. The
+      # `am:`/`bd:` refs stay `no_root` here; see the note below.
+      - run: python3 validate.py --resolve
 
 # WHAT THIS JOB DOES NOT COVER, stated rather than implied -- BD's ci.yml does
 # the same and it is the half that keeps a green tick honest.
@@ -42,10 +48,11 @@ jobs:
 #   be worse than not running it -- this thread's AM half lives on a worktree
 #   branch that is on neither `main` nor `version2`, so a green tick would mean
 #   "nine refs missing" or "nine refs fine" depending on nothing.
-#   What COULD run here with no configuration is the rootless half:
-#   `python3 validate.py --resolve` resolves every `<side>:bridge/...` ref
-#   against this checkout -- 11 of them, including one of the two real findings
-#   the branch turned up (r4 cites r2 at a rev where the blob is a different
-#   hash). It is left unwired deliberately and visibly: wiring it turns this
-#   job red until the owning side corrects a sealed document, and that is the
-#   owner's decision, not this file's. One line when they take it.
+#   The rootless half IS wired, above. It resolves every `<side>:bridge/...`
+#   ref against this checkout -- 11 of them -- and it found both of the real
+#   defects the branch turned up: r4 citing r2 at a rev where the blob is a
+#   different hash, and r9 pinning r7 to a commit that predates r7. Wiring it
+#   waited until both were corrected by their owning sides, because turning
+#   this job red on somebody else's sealed document is their call and not this
+#   file's. What is NOT covered stays not covered: an `am:` or `bd:` ref is
+#   reported `no_root` and counted, never silently skipped.
