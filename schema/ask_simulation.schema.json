@@ -150,6 +150,53 @@
     },
     "assumptions_resolved": {
       "$ref": "common.defs.json#/$defs/assumptions_resolved"
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "what",
+          "why",
+          "consequence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          },
+          "consequence": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "not_yet_built",
+              "not_buildable_here",
+              "needs_human_action",
+              "needs_data_transfer",
+              "out_of_scope"
+            ],
+            "description": "What sort of gap this is, because `would_need` collapses kinds that send a reader to different places.\n  not_yet_built       — work someone could do inside this framework.\n  not_buildable_here  — a limit OF the framework; no work inside it helps. r2's gaps[0] said a wall runner was needed; measured later, at fixed h the wall's only effect is a scalar gamma, which enters no dimensionless group the trap case carries (k* = 21221.4 at all six rungs, identically -- all six are the same dimensionless run, and Faxen lives entirely in the back-transform). No runner there can learn anything about the wall, the same reason a rod's gamma_perp/gamma_par measures 1.000000 in it.\n  needs_human_action  — an operator has to do something. No agent closes it.\n  needs_data_transfer — the bytes exist, on a machine neither side can reach. AM's P7 is this: the 2026-09-03 drag data lives on the instrument PC under D:\\codes, and the repository holds no trajectory data at all. Reading it as `not_yet_built` cost this thread a round of advice premised on the answer being minutes away.\n  out_of_scope        — deliberately excluded, not missing.\nOptional only so that documents written before this field existed keep validating. R12 warns when it is absent; new gaps should carry it."
+          },
+          "would_need": {
+            "type": "string",
+            "description": "What closes it. For `not_buildable_here` this is an alternative METHOD, not a task -- e.g. test the fit procedure on a synthetic gamma(h) rather than report a number from an infinite medium, which is what r1's own `wall_drag` assumption had already asked for. For `needs_data_transfer` name the machine and the path."
+          },
+          "owner": {
+            "enum": [
+              "am",
+              "bd",
+              "human",
+              "nobody"
+            ],
+            "description": "Who can close it. `nobody` is a valid and important answer -- it is what `not_buildable_here` usually means, and saying so beats leaving a task unassigned."
+          }
+        }
+      },
+      "description": "The experiment side needs this as much as the simulation side, and its absence here was a hole. A precondition written as a checklist item reads closeable; P7 ('run the slope fit on the 2026-09-03 data') reads like a few minutes of work and is in fact a data transfer off an instrument PC. Declare it as a gap with a kind and an owner, so the other side does not plan a round around it."
     }
   }
 }

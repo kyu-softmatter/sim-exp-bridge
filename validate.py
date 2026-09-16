@@ -331,6 +331,29 @@ def r8_tier_not_derivable(doc: dict, rep: Report) -> None:
     walk(doc, "")
 
 
+def r12_gap_kind(doc: dict, rep: Report) -> None:
+    """A gap without a `kind` sends the reader to the wrong place.
+
+    `would_need` collapses "work someone could do" with "a limit of the
+    framework" and with "the bytes are on another machine". The thread paid for
+    each of those once: r2 said a wall runner was needed when no runner there can
+    learn anything about a wall, and AM's P7 read as a few minutes of analysis
+    when it is a data transfer off an instrument PC. Both readings send somebody
+    somewhere, and only one of them was right in each case.
+    """
+    for i, g in enumerate(doc.get("gaps", []) or []):
+        if "kind" not in g:
+            rep.warn("R12", f"gaps[{i}] ({str(g.get('what'))[:60]!r}) has no `kind`. "
+                            "not_yet_built, not_buildable_here, needs_human_action and "
+                            "needs_data_transfer are four different instructions to the "
+                            "reader; `would_need` alone does not separate them.")
+        elif g.get("kind") == "not_buildable_here" and g.get("owner") not in (None, "nobody", "human"):
+            rep.warn("R12", f"gaps[{i}] is not_buildable_here but owner is "
+                            f"{g.get('owner')!r}. If no work inside the framework helps, "
+                            "assigning it to a side leaves a task nobody can finish; "
+                            "`nobody` is the honest owner.")
+
+
 # -------------------------------------------------------------- R6: hash drift
 def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
               path: Path | None = None) -> None:
@@ -626,6 +649,7 @@ def validate(path: Path, manifest: dict | None) -> Report:
     r5_circular(doc, rep)
     r5b_round_trip_labels(doc, rep)
     r8_tier_not_derivable(doc, rep)
+    r12_gap_kind(doc, rep)
     r6_hashes(doc, rep, manifest, path)
     r7_confirmed_by(doc, rep)
     return rep

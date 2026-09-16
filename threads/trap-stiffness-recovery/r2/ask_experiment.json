@@ -360,25 +360,33 @@
       "what": "The Faxen separation itself, and therefore h0.",
       "why": "This case has no wall and one height. gamma_0 is bulk Stokes; there is no h in the system at all.",
       "consequence": "The answering quantity you asked for (h0, +/-0.2 um) is NOT answered. This round answers the per-rung input precision that the h0 fit consumes.",
-      "would_need": "A runner for a trapped sphere at a no-slip wall with a height-dependent mobility. RUNNERS in cli.py has one card today (passive-sphere--harmonic-trap); this would be a second one, and running the trap runner on it would silently compute the wrong system."
+      "would_need": "A runner for a trapped sphere at a no-slip wall with a height-dependent mobility. RUNNERS in cli.py has one card today (passive-sphere--harmonic-trap); this would be a second one, and running the trap runner on it would silently compute the wrong system.",
+      "kind": "not_yet_built",
+      "owner": "bd"
     },
     {
       "what": "Motion blur and localisation noise.",
       "why": "A BD trajectory has no detector. Adding both is a post-processing layer over the sampled positions, not a change of physics -- so it is cheap, but it does not exist yet.",
       "consequence": "The 1.17 % is a noise-free number. Your requirement epsilon <= 7.6 nm was derived analytically here, not simulated.",
-      "would_need": "A sampling layer: integrate positions over t_exp, then add Gaussian epsilon. Roughly a day, and it would let the next round answer the question this one deferred."
+      "would_need": "A sampling layer: integrate positions over t_exp, then add Gaussian epsilon. Roughly a day, and it would let the next round answer the question this one deferred.",
+      "kind": "not_yet_built",
+      "owner": "bd"
     },
     {
       "what": "The six-rung least-squares fit for h0 and gamma_bulk.",
       "why": "No ladder was simulated. requirements[3] passes your own 3 %/rung figure through unchanged.",
       "consequence": "sigma_gamma_per_rung <= 3 % is recorded but unverified. Do not read it as corroborated.",
-      "would_need": "The wall runner above, plus a synthetic ladder at six heights x the seed count."
+      "would_need": "The wall runner above, plus a synthetic ladder at six heights x the seed count.",
+      "kind": "not_yet_built",
+      "owner": "bd"
     },
     {
       "what": "One bead versus 1000 replicas.",
       "why": "N = 1000 was chosen as a statistics device and settled confirmed_by: run.",
       "consequence": "Every error bar in this document is an ensemble error bar. The experiment has one bead per rung.",
-      "would_need": "Re-run at n_replicas = 1 with many seeds and report the per-realisation scatter. Cheap; should be the first thing the next round does."
+      "would_need": "Re-run at n_replicas = 1 with many seeds and report the per-realisation scatter. Cheap; should be the first thing the next round does.",
+      "kind": "not_yet_built",
+      "owner": "bd"
     }
   ],
   "findings": [
