@@ -1,27 +1,58 @@
-# Change requests from the BD side — seven, none of them applied
+# Change requests from the BD side — seven, all seven answered
 
-**Status: proposals. Nothing under `schema/`, `validate.py` or `README.md` has
-been touched**, per the file-ownership table.
+**Revision 3, 2026-09-16.** Every request below is closed. Each section keeps
+its original text, because the request is the record of why the change was
+made, and carries a status line saying how it was answered and where.
 
-**Revision 2, after `c288df6`.** The first revision of this file was written
-before the bridge grew `corrects[]`, `rev` on a `ref`, and optional
-`question`/`date`. Those changes closed one of the two observations at the end
-and are noted below; **all five original requests are still open**, and r4 has
-since given three of them a worked example rather than a hypothetical one.
+> ⚠️ **The two revisions above this one said "none of them applied" for longer
+> than it was true.** C2, C4 and C6 had been implemented — `evidence_classes`
+> with R10, the tier-authority statement with R8, R4 accepting
+> `assumptions_resolved: false`, and a `fixtures/valid/` guard *named after C6*
+> — while this file's header still read "Nothing under `schema/`,
+> `validate.py` or `README.md` has been touched". `fixtures/invalid/README.md`
+> knew: it says one fixture is "r1's import as it stood **before C4 was
+> answered**." A cited document that has rotted is this repository's own
+> subject, and its change-request ledger was the instance. Revision 3 exists
+> mostly to stop that.
 
-Verified by execution at the time of writing: `validate.py --selftest` is clean
-(12/12, with `jsonschema` present so R1 actually runs — note the `simulation_bot`
-env does **not** have it, so a selftest run from there silently skips R1; use
-`/opt/homebrew/Caskroom/miniconda/base/bin/python3`). All `bd:` hashes in
-`hashes.json` verify against their files at the `rev` each one names.
+| | request | answered by |
+|---|---|---|
+| C1 | `tier` has no axis for *whose* evidence | a stated rule, no schema change — README [`origin` is load-bearing at rest](../README.md) |
+| C2 | shipped `tier` vs derived `tier` | README "`evidence` is authoritative; `tier` is non-normative", enforced as **R8** |
+| C3 | `simulated` / `round_trip` have no tier | T1 gives both `—`; the enforceable half is **R14** (no `round_trip` in `system_primitives`) |
+| C4 | one `evidence_class` for a mixed entry | optional `evidence_classes` map, and **R10** makes the class the worst of it |
+| C5 | `px` / `fps` / `count` carry a silent multiplier | all three removed from `UNIT_TOKENS`, with a negative fixture |
+| C6 | a correction cannot raise a new `unknown` | **R4** accepts `assumptions_resolved: false` at any status; `fixtures/valid/c6-correction-with-unknown.json` |
+| C7 | `chain` documented as required, enforced nowhere | the description branch: the false claim is **withdrawn in the schema text** |
 
-Ordered by what blocks what. **C1–C3 block BD's import adapter, C4 blocks
-`knowledge/external/am/`, C5 and C6 block nothing but are each a way for a
-value to be silently wrong.**
+**One half is deliberately not closed here, and it is not the bridge's:** C3
+asked that a `round_trip` value be refused *at import* on the BD side, pointing
+at the local original. R14 refuses it on the wire; the import refusal lives in
+BD's pipeline and this repository cannot reach it.
+
+**This file has no gate, and that is the honest thing to say about it.** The
+selftest checks rules, fixtures, anchors and revisions; nothing checks that a
+prose ledger still describes the code. Revision 3 is true because it was
+written the day the last request closed, and it will drift the same way
+revision 2 did unless the next change to `schema/` or `validate.py` updates it
+in the same commit. The remedy that would be cheaper than the temptation has
+not been found; naming that is not the same as fixing it.
+
+Verified by execution at revision 3: `validate.py --selftest` clean, with
+`jsonschema` present so R1 actually runs — note that BD's `simulation_bot`
+env does **not** have it, and under `--selftest` a missing dependency is now an
+**error** rather than a silent skip, on the KB-entry path as well as the wire
+path. `--resolve` against both clones: 46 resolved, 0 unresolvable.
 
 ---
 
 ## C1 · `tier` has no axis for *whose* evidence
+
+> **CLOSED (rev 3) — as asked: a stated rule, nothing in `schema/`.** T1 now
+> says `origin` is load-bearing **at rest** and not only in transit, with the
+> `d: 5.0 um` / `d: 4.95 um` pair as the example, and the mirror on the AM
+> side recorded beside it. The reason for not renumbering is quoted there:
+> foreign is not a confidence level.
 
 **The problem.** T1 maps `measured → 0`. BD's tier 0 is defined in
 `bdbot/provenance.py` as *"directly given or handbook"* — where "given" means the
@@ -56,6 +87,11 @@ tier 0, not worse.
 
 ## C2 · The shipped `tier` and the derived `tier` disagree — in the fixture
 
+> **CLOSED — `evidence` is authoritative, `tier` is non-normative.** Said in
+> the README and enforced as **R8**, which warns on a tier not reachable
+> from its evidence. New documents omit `tier`; sealed ones keep theirs and
+> the warning stands as the record.
+
 `common.defs.json` says `tier` is *"Optional on the wire: the importer derives it
 from `evidence` via README table T1."* r1 ships a tier on all 12 values, and 6 of
 them are not reproducible from T1:
@@ -80,6 +116,12 @@ authoritative.
 
 ## C3 · `simulated` and `round_trip` have no tier at all
 
+> **CLOSED on the wire; the import half is BD's.** T1 gives `simulated` and
+> `round_trip` no tier at all, and **R14** refuses a `round_trip` value in
+> `system_primitives` — R5's argument one layer earlier, since
+> `system_primitives` is what the receiver builds its system out of.
+> Refusing at import and pointing at the local original is BD's pipeline.
+
 T1 gives `—` for both. From r3 onward BD's own numbers come home, so this is the
 present round, not a future one.
 
@@ -91,6 +133,11 @@ in `knowledge/external/am/` with `may_be_gate_threshold: false`, never in
 `system.yaml`.
 
 ## C4 · One `evidence_class` for an entry holding four kinds of evidence
+
+> **CLOSED — the second option, as BD preferred.** `evidence_classes` is an
+> optional per-symbol map and **R10** requires `evidence_class` to be the
+> worst entry in it, so a citation can never read better than the entry's
+> weakest number. Negative fixture: `r10-class-better-than-worst`.
 
 `kb_external_entry.schema.json` has a single top-level `evidence_class`, and
 `additionalProperties: false` means per-value evidence cannot be recorded at all.
@@ -112,6 +159,12 @@ that `d` and `pixel_size` really are measured.
 this schema.
 
 ## C5 · `px` and `fps` are sanctioned units that carry a silent multiplier
+
+> **CLOSED — all three tokens removed.** Verified by execution rather than
+> by reading: `fps` → 0.3048 m/s, `px` → 0.2646 mm in pint, and no document
+> used any of them. Frame rates cross as `Hz`, pixel counts as
+> `dimensionless` with the symbol carrying the meaning. Fixture:
+> `r2-pixel-token-removed.json`, so the removal is observable.
 
 `UNIT_TOKENS` includes `px`, `fps` and `count`. All three parse in pint. They
 parse as **the wrong thing**:
@@ -141,6 +194,11 @@ selftest is clean and why this is cheap **now**.
 
 ## C6 · A correcting document cannot also raise a new `unknown` assumption
 
+> **CLOSED — R4 was rewritten around the claim rather than the status.**
+> `assumptions_resolved: false` declares an unresolved assumption at any
+> status, so a correction no longer has to demote itself to a draft to be
+> honest. Guarded by `fixtures/valid/c6-correction-with-unknown.json`.
+
 R4 forces `status: draft` whenever any assumption is `unknown`. `corrects[]` and
 `status: supersedes_prior` were added precisely so a correction **does not wait**.
 The two collide: r4 needed to declare a newly-discovered unknown — *neither side
@@ -161,6 +219,11 @@ keeping. Either is fine; the current state quietly pushes content out of
 not a number."*
 
 ## C7 · `chain` is documented as required and is enforced nowhere
+
+> **CLOSED — the description branch of "wire it or change the
+> description".** `quantity.chain` now says it is **not** machine-enforced,
+> names what actually runs (R5 off `requirements[].basis_refs`, R5b off
+> `origin`), and withdraws the false claim in as many words.
 
 `common.defs.json` describes `quantity.chain` as *"Required for the cycle check
 (validator rule R5)."* It is not in `required`, `validate.py` contains the string
@@ -185,7 +248,12 @@ cited. (This was a non-request in revision 1; r4 is the first document whose
 - **`question` / `date` on an imported entry** — AM proposed, accepted in
   `3ddcf32`.
 - **`hashes.json` plan drift** — handled by the `@r<N>` key convention rather than
-  by overwriting. Note that `tools/rehash.sh`, cited in the file's own
-  `_comment`, **still does not exist**; the `am:bridge/.../r1/ask_simulation.json`
-  key still holds the *plan's* hash rather than the ask's (deliberate, per r2's
-  note), so the first regeneration would turn it into a false "moved upstream".
+  by overwriting. Two notes from this entry have since come true and are now
+  fixed, and both are worth keeping because the prediction was the useful part:
+  `tools/rehash.sh`, cited in the file's own `_comment` and **absent for the
+  whole life of the manifest**, now exists and prints the lines to add without
+  writing any; and the `am:bridge/.../r1/ask_simulation.json` key, which
+  deliberately holds the *plan's* hash, **did** read as a false "moved
+  upstream" on the first regeneration — R6's `--resolve` branch was that
+  regeneration — so the exception is declared in `_subject_of` instead of
+  living in two prose notes.
