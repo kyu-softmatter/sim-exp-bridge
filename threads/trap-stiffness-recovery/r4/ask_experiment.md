@@ -102,10 +102,16 @@ bead at 2000, and 29.1 % at 310.**
 ## One thing to settle, and it is not ours alone
 
 **Neither side has said which Lorentzian estimator it uses.** Measured here, the
-choice of fit is worth more than most of the physics differences in this thread
-— up to +7.9 %. Until both sides name the fit (weighted or not, over what band),
-an agreement on `f_c` between them is uninterpretable at the ~1 % level.
+choice of fit is worth more than every physics difference declared in this thread
+except the wall — up to +7.9 %. Until both sides name the fit (weighted or not,
+over what band), an agreement on `f_c` between them is uninterpretable at the
+~1 % level.
 
-Raised as a `finding` rather than an `assumption` because R4 makes an `unknown`
-assumption force `status: draft`, and a correction must not wait to be a draft.
-The protocol has no carve-out for that; one is proposed rather than assumed.
+Carried as `assumptions[estimator].status: unknown` with
+`assumptions_resolved: false`. That field did not exist when this document was
+first written: R4 forced `draft` on any unknown, `supersedes_prior` exists so a
+correction does not wait, and the two collided — so the item was filed as a
+`finding` instead, which is the substitution R4 exists to prevent. `642bd48`
+split `status` (where a document is in its lifecycle) from `assumptions_resolved`
+(whether its assumptions are declared), and the item moved back where it belongs.
+Deliberately broken and re-checked: remove the flag and R4 fires.

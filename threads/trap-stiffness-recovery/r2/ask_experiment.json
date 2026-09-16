@@ -226,8 +226,8 @@
         "symbol": "gamma_corr",
         "value": 0.056584,
         "unit": "pN*s/um",
-        "source": "gamma_0 x 1.211, where 1.211 is YOUR declared Faxen factor at h = 8 um. This number is not this repository's physics; it is your assumption arithmetic, carried so the timescales below are comparable to your tables.",
-        "evidence": "assumed",
+        "source": "gamma_0 x 1.211, where 1.211 is YOUR declared Faxen factor at h = 8 um. This number is not this repository's physics; it is your assumption arithmetic, carried so the timescales below are comparable to your tables. [relabelled 2026-09-15: evidence was `assumed`, which left the fact that this number came home visible only to a reader of this prose. R5b now requires `round_trip` for a consumer-origin quantity. The value is unchanged -- this corrects a label, not a number.]",
+        "evidence": "round_trip",
         "origin": "am",
         "tier": 3
       },

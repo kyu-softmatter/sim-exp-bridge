@@ -197,6 +197,18 @@
       "mine": "Overdamped, tau_p/tau_k = 8.14e-4",
       "theirs": "neglected",
       "worth": null
+    },
+    {
+      "name": "estimator",
+      "status": "unknown",
+      "mine": "Unweighted least squares of S0/(1+(f/f_c)^2) over the entire one-sided Welch PSD, PSDs averaged across traces before fitting. Now measured to be biased by +0.8 to +1.2 % at 10 samples per tau_k, and by up to +7.9 % at coarser sampling.",
+      "theirs": null,
+      "worth": {
+        "value": 7.9,
+        "unit": "percent",
+        "note": "Worst case over the sampling range checked; +0.8 % at the run's own configuration. Larger than every physics difference declared in this thread except the wall."
+      },
+      "note": "Both sides fit a Lorentzian to a PSD and neither has said which fit. Until that is stated the two are not measuring the same quantity, and an agreement between them at the ~1 % level means nothing. Returned to assumptions[] from findings[] after C6 was answered in 642bd48: `assumptions_resolved` now carries 'are the assumptions declared' separately from `status`, so a correction can declare a new unknown without demoting itself to a draft. That separation is the right one -- filing this as a disagreement was the substitution R4 exists to prevent."
     }
   ],
   "gaps": [
@@ -253,13 +265,6 @@
       "bd_says": "An exact OU sampler is unbiased at any step size, so it isolates the estimator and the detector from integration error -- which is what made the bias visible at all. A BD re-run would have carried Euler-Maruyama error into the same comparison and could not have separated them.",
       "kind": "gap",
       "resolution_owner": "bd"
-    },
-    {
-      "what": "Neither side has declared which Lorentzian estimator it uses, and the estimator is now known to be the dominant systematic.",
-      "am_says": "(not declared -- the plan says 'the Lorentzian f_c' without naming a fit)",
-      "bd_says": "Unweighted least squares of S0/(1+(f/f_c)^2) over the entire one-sided Welch PSD, PSDs averaged across traces before fitting. Now known to be biased by +0.8 to +1.2 % at 10 samples per tau_k and by up to +7.9 % elsewhere. Until both sides name the fit -- weighted or unweighted, and over what band -- the two are not measuring the same quantity, and a comparison between them is between two different estimators as much as between two systems. This is raised as a finding and not as an assumption because R4 makes an `unknown` assumption force `status: draft`, and a correction must not wait to be a draft; the protocol has no carve-out for that yet and one is proposed rather than assumed.",
-      "kind": "gap",
-      "resolution_owner": "human"
     }
   ],
   "out_of_scope": [
@@ -270,7 +275,7 @@
   "derived_from": [
     {
       "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json",
-      "hash": "sha256:d20427218c5cba73",
+      "hash": "sha256:683eae8f34a6bef9",
       "rev": "c288df6",
       "note": "the document this corrects; its status is now `corrected`."
     },
@@ -287,5 +292,6 @@
       "note": "the machine-readable output every number above is read from."
     }
   ],
-  "confirmed_by": null
+  "confirmed_by": null,
+  "assumptions_resolved": false
 }

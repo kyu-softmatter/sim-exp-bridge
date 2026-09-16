@@ -282,9 +282,9 @@
   "derived_from": [
     {
       "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json",
-      "hash": "sha256:d20427218c5cba73",
+      "hash": "sha256:683eae8f34a6bef9",
       "rev": "c288df6",
-      "note": "the document this corrects; its status is now `corrected`."
+      "note": "the document this corrects; its status is now `corrected`. hash refreshed sha256:d20427218c5cba73 -> sha256:683eae8f34a6bef9 when R5b's one hit was relabelled in r2 (evidence assumed -> round_trip on gamma_corr, a label and not a value). Mechanical repair by the BD session of a break it caused: R6 was right to fire, and a red --selftest is worse than an edit to a fixture."
     },
     {
       "ref": "bd:verify/verify_detector_model.py",

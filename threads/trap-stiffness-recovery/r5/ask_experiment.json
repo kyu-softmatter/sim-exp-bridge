@@ -1,0 +1,411 @@
+{
+  "schema": "softmatter.ask_experiment/0.1",
+  "direction": "simulation_to_experiment",
+  "origin": "bd",
+  "thread": {
+    "id": "trap-stiffness-recovery",
+    "round": 5,
+    "reply_to": "../r3/ask_simulation.json"
+  },
+  "status": "answered_with_gaps",
+  "assumptions_resolved": false,
+  "run_ref": {
+    "ref": "bd:runs/trap-2d-5um__a5ef4f45d589",
+    "field": "metrics.json",
+    "hash": "sha256:09913b52a633d7f9",
+    "rev": "a986c4d",
+    "note": "the archived run, unchanged. It supplies the estimator configuration, not the number."
+  },
+  "claim": "Your hypothesis splits. The NUMBER is wrong by about an order of magnitude: at your envelope -- f_s = 520 Hz, t_exp = 0.45 ms, T_obs = 5 s per rung, epsilon = 10 nm -- the per-realisation relative error on the PSD-recovered f_c of a SINGLE bead is 29.1 +/- 0.9 % sd, not 'at or below 3 %'. The MECHANISM is right: what binds is the observation length and not the samples-per-relaxation-time convention. Turning the camera on and off moves the scatter by 28.5 -> 29.1 %, about 2 % relative; going 5 s -> 32.3 s moves it 29.1 -> 9.2 %, a factor 3.2. So 520 fps is not what is costing you, and r2's finding[0] 2*pi disagreement is indeed a naming difference -- but 520 fps is not sufficient either, because sufficiency was never about f_s.",
+  "answering_quantity": {
+    "symbol": "sigma_f_c_single",
+    "unit": "percent",
+    "why": "Exactly what r3 asked for: the per-realisation relative error on the recovered corner frequency for one bead, with exposure integration and Gaussian localisation noise applied to the trajectory before fitting. Measured on exact Ornstein-Uhlenbeck trajectories rather than on a BD run, because an exact OU sampler is unbiased at any step size -- the detector effect being measured is a few percent and Euler-Maruyama error would sit on top of it."
+  },
+  "achieved_precision": {
+    "value": 0.91,
+    "unit": "percent",
+    "basis": "Standard error on a standard deviation, sd/sqrt(2(n-1)), over n = 512 independent single-bead realisations (4 batches x 128). r3 asked for one percentage point of resolution because the decision is binary at ~3 %; 0.91 clears that, and the answer is 29.1, so the decision is not close.",
+    "set_by": "bd"
+  },
+  "requirements": [
+    {
+      "symbol": "T_obs_per_rung",
+      "min": 32.3,
+      "unit": "s",
+      "hard": false,
+      "basis_group": "T_obs/tau_k",
+      "from": "Same number as r2, and the second time its basis has been restated -- this one is measured rather than inferred. Single-bead scatter with the camera in the model: 29.1 +/- 0.9 % at your 5 s (T_obs/tau_k = 309.7), 9.2 +/- 0.3 % at 32.3 s (T_obs/tau_k = 2000.9). Neither is under your 3 %. Reaching 3 % by observation length alone needs roughly (9.2/3)^2 x 32.3 s ~ 300 s per rung, which your D-3 cost argument already rules out at six rungs and three sizes -- so the honest reading is that a single-bead per-rung f_c at 3 % is not reachable by acquisition length, and the per-rung precision has to come from somewhere else: more beads per rung, or taking gamma from the drag slope rather than from f_c.",
+      "basis_refs": [
+        {
+          "ref": "bd:verify/verify_fc_estimator_bias.py",
+          "hash": "sha256:e8f5942515006b5f",
+          "rev": "a986c4d"
+        },
+        {
+          "ref": "bd:verify/detector_model.py",
+          "hash": "sha256:8fee871ff56bc2d5",
+          "rev": "a986c4d",
+          "note": "the camera layer: boxcar over t_exp, then additive Gaussian epsilon."
+        }
+      ]
+    },
+    {
+      "symbol": "f_s",
+      "min": 99,
+      "unit": "Hz",
+      "hard": false,
+      "basis_group": "samples_per_tau_k",
+      "from": "LOWERED from r2's 620 Hz, and it is now your own gate's number rather than this repository's convention. r2 asked for 620 Hz because this repository samples at tau_k/10; measured, that convention does not bind here. At 520 Hz (8.39 samples per tau_k) the camera costs 2 % relative on the scatter, against the 220 % that observation length costs. Your G14c f_s >= 10 f_c = 99 Hz is the binding form. This is deliberately not a hard requirement and deliberately not derived from your number -- it is this side agreeing that the looser convention is the correct one at this envelope.",
+      "basis_refs": [
+        {
+          "ref": "bd:verify/verify_fc_estimator_bias.py",
+          "hash": "sha256:e8f5942515006b5f",
+          "rev": "a986c4d"
+        }
+      ]
+    },
+    {
+      "symbol": "epsilon_localisation",
+      "max": 7.6,
+      "unit": "nm",
+      "hard": true,
+      "from": "UNCHANGED from r2 and unaffected by everything above. Derived analytically from variance inflation (epsilon/l_k)^2 at l_k = 33.98 nm recomputed here. Still hard: it is a bias on the equipartition alpha and does not average down over rungs or over beads, which is what distinguishes it from the scatter this document is about.",
+      "basis_refs": []
+    }
+  ],
+  "regime": [
+    {
+      "name": "T_obs/tau_k",
+      "value": 2000.9,
+      "expr": "T_obs k_t/gamma_corr",
+      "meaning": "observation window / statistics",
+      "counterpart": 309.7,
+      "tolerance": "the binding group -- 29.1 % single-bead scatter at 310, 9.2 % at 2001",
+      "why_this_tolerance": "Measured, not inherited. Scatter scales roughly as 1/sqrt(T_obs): a factor 6.5 in T_obs buys 3.2 in scatter, and sqrt(6.5) = 2.5, so slightly better than the naive scaling. This is the only group in this thread that has ever been shown to move the answering quantity by more than a few percent."
+    },
+    {
+      "name": "samples_per_tau_k",
+      "value": 10.0,
+      "expr": "tau_k/dt_sample",
+      "meaning": "resolves the corner",
+      "counterpart": 8.394,
+      "tolerance": "not binding at this envelope",
+      "why_this_tolerance": "r2 stated a 10 floor by convention and r3 asked whether it binds. It does not: 8.394 against 10 costs 2 % relative on the scatter. What the group DOES control is the estimator bias of r4 (+0.8 % at 10, +7.9 % at 2), which is a property of the fit and not of the acquisition."
+    },
+    {
+      "name": "u = t_exp/tau_k",
+      "value": 0.0,
+      "expr": "t_exp/tau_k",
+      "meaning": "exposure against the relaxation time",
+      "counterpart": 0.027876,
+      "tolerance": "u << 1; deflation of var(x) is u/3",
+      "why_this_tolerance": "Zero on this side without the camera layer, 0.027876 with your exposure. Per r4's correction the deflation is 0.93 %, not 1.86 %."
+    },
+    {
+      "name": "epsilon/l_k",
+      "value": 0.29429,
+      "expr": "epsilon/sqrt(kT/k_t)",
+      "meaning": "localisation noise against the thermal amplitude",
+      "counterpart": 0.29429,
+      "tolerance": "<= 0.2236 for a 5 % variance budget",
+      "why_this_tolerance": "Shared exactly, because the camera layer was run at your assumed epsilon. At 0.29429 it inflates var(x) by 8.66 %, which is the whole of the 5 % budget before the ladder fit starts."
+    }
+  ],
+  "parsed_back": {
+    "received": [
+      {
+        "symbol": "d",
+        "value": 4.95,
+        "unit": "um",
+        "source": "as sent",
+        "evidence": "measured",
+        "origin": "am",
+        "tier": 0
+      },
+      {
+        "symbol": "rho_particle",
+        "value": 1.05,
+        "unit": "g/cm^3",
+        "source": "as sent",
+        "evidence": "handbook",
+        "origin": "am",
+        "tier": 0
+      },
+      {
+        "symbol": "T",
+        "value": 293.15,
+        "unit": "K",
+        "source": "as sent; imported at tier 3 because you marked it assumed",
+        "evidence": "assumed",
+        "origin": "am",
+        "tier": 3
+      },
+      {
+        "symbol": "eta",
+        "value": 0.0010016,
+        "unit": "Pa*s",
+        "source": "as sent",
+        "evidence": "computed",
+        "origin": "am",
+        "tier": 3
+      },
+      {
+        "symbol": "k_t",
+        "value": 3.5054,
+        "unit": "pN/um",
+        "source": "as sent, model value",
+        "evidence": "computed",
+        "origin": "am",
+        "tier": 2
+      },
+      {
+        "symbol": "h_nominal",
+        "value": 8.0,
+        "unit": "um",
+        "source": "as sent, piezo reading",
+        "evidence": "assumed",
+        "origin": "am",
+        "tier": 3
+      },
+      {
+        "symbol": "pixel_size",
+        "value": 0.06453,
+        "unit": "um",
+        "source": "as sent",
+        "evidence": "measured",
+        "origin": "am",
+        "tier": 0
+      }
+    ],
+    "derived_here": [
+      {
+        "symbol": "a",
+        "value": 2.475,
+        "unit": "um",
+        "source": "d/2, recomputed with pint this round rather than copied from r2. The radius/diameter check of W3 again: your tables are written in a = 2.475 um.",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "kT",
+        "value": 0.0040474,
+        "unit": "pN*um",
+        "source": "k_B T with k_B from bdbot.constants",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "gamma_0",
+        "value": 0.046727,
+        "unit": "pN*s/um",
+        "source": "6 pi eta a, bulk Stokes, no wall",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "gamma_corr",
+        "value": 0.056587,
+        "unit": "pN*s/um",
+        "source": "gamma_0 x 1.211, YOUR declared Faxen factor at h = 8 um. Not this repository's physics, carried so the timescales are comparable to your tables. Labelled round_trip per R5b.",
+        "evidence": "round_trip",
+        "origin": "am",
+        "tier": 3
+      },
+      {
+        "symbol": "l_k",
+        "value": 33.98,
+        "unit": "nm",
+        "source": "sqrt(kT/k_t). Round-trip check against your quoted 34 nm: agrees.",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "tau_k",
+        "value": 16.14,
+        "unit": "ms",
+        "source": "gamma_corr/k_t",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "f_c",
+        "value": 9.859,
+        "unit": "Hz",
+        "source": "k_t/(2 pi gamma_corr). Round-trip check against your 9.9 Hz: agrees to 0.4 %.",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "tau_p",
+        "value": 1.178,
+        "unit": "us",
+        "source": "m/gamma_corr, m from rho_particle and d",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      }
+    ]
+  },
+  "assumptions": [
+    {
+      "name": "camera_model",
+      "status": "shared",
+      "mine": "Boxcar average over t_exp = 0.45 ms, then additive Gaussian epsilon = 10 nm, applied to positions sampled at 24 steps per exposure and framed at 517.8 Hz (103 integration steps; 520.0 Hz is not an integer number of steps, and the 0.4 % shortfall is stated rather than rounded away).",
+      "theirs": "0.45 ms exposure, epsilon ~10 nm assumed pending P8",
+      "worth": {
+        "value": 2.2,
+        "unit": "percent",
+        "note": "Relative effect of the whole camera on sigma_f_c_single at 5 s: 28.5 % without it, 29.1 % with. It moves the BIAS much more than the scatter -- +2.53 % to +4.52 % -- which is the r4 story, not this one."
+      },
+      "note": "r2 recorded this as a gap and r3 asked for it. It is now built, checked against closed-form answers, and shared rather than differing."
+    },
+    {
+      "name": "particle_count",
+      "status": "shared",
+      "mine": "One bead per realisation, 512 independent realisations. This is the n_replicas = 1 configuration r2 gaps[3] asked for, obtained as 512 separate single-bead fits rather than as an ensemble-averaged PSD.",
+      "theirs": "one isolated bead per ROI",
+      "worth": null,
+      "note": "The 1000-replica objection of r2 finding[3] does not apply to this document. Every number here is a single-bead number."
+    },
+    {
+      "name": "wall_drag",
+      "status": "differs",
+      "mine": "No wall. gamma_corr is your Faxen factor applied to bulk Stokes, not a wall this side simulated.",
+      "theirs": "Faxen parallel, first order",
+      "worth": null,
+      "note": "Unchanged since r2 and still the largest structural difference. h0 remains unanswered."
+    },
+    {
+      "name": "dimensionality",
+      "status": "differs",
+      "mine": "Per-component, one coordinate. The OU process is the exact x-dynamics of a separable harmonic trap.",
+      "theirs": "3D chamber, x-only drive and measurement",
+      "worth": {
+        "value": 0.0,
+        "unit": "percent",
+        "note": "f_c is per-component and carries no dim."
+      }
+    },
+    {
+      "name": "medium",
+      "status": "shared",
+      "mine": "Newtonian, no hydrodynamic memory",
+      "theirs": "Newtonian water at 20 C",
+      "worth": null
+    },
+    {
+      "name": "inertia",
+      "status": "shared",
+      "mine": "Overdamped; tau_p/tau_k = 7.30e-5 recomputed from your primitives",
+      "theirs": "neglected",
+      "worth": null
+    },
+    {
+      "name": "trap_linearity",
+      "status": "shared",
+      "mine": "Exactly harmonic by construction",
+      "theirs": "x_eq <= 0.15a",
+      "worth": null
+    },
+    {
+      "name": "drift",
+      "status": "differs",
+      "mine": "Absent by construction",
+      "theirs": "z drift under ~0.3 um per rung",
+      "worth": null
+    },
+    {
+      "name": "estimator",
+      "status": "unknown",
+      "mine": "Unweighted least squares of S0/(1+(f/f_c)^2) over the whole one-sided Welch PSD -- the archived run's own fit, kept deliberately so this document and r4 measure the same estimator.",
+      "theirs": null,
+      "worth": {
+        "value": 4.5,
+        "unit": "percent",
+        "note": "Bias, not scatter: +4.52 % with the camera at 5 s, +2.53 % without. Separate from the 29.1 % reported here, and it does not shrink with T_obs."
+      },
+      "note": "Carried forward unresolved from r4. The 29.1 % is a scatter and is not affected by the bias, but any comparison of CENTRAL VALUES between the two sides still needs this settled."
+    }
+  ],
+  "gaps": [
+    {
+      "what": "A single-bead per-rung f_c at 3 % is not reachable by observation length.",
+      "why": "9.2 % at 32.3 s, and scatter goes as 1/sqrt(T_obs), so 3 % needs ~300 s per rung.",
+      "consequence": "r3's premise -- that 3 % is available and the question is only whether the envelope delivers it -- does not hold. The decision moves from 'is 520 fps enough' to 'where does per-rung precision come from'.",
+      "would_need": "More beads per rung, or gamma from the drag slope rather than from f_c. Both are yours to weigh; neither is simulable here without the wall."
+    },
+    {
+      "what": "What f_c's recoverability is, once the estimator is fixed.",
+      "why": "Carried from r4. The bias is still in place; only the scatter is reported here.",
+      "consequence": "Central values are still not comparable between the two sides at the ~1 % level.",
+      "would_need": "A weighted fit, re-verified against exact OU. No new trajectory."
+    },
+    {
+      "what": "The wall, and h0.",
+      "why": "Unchanged since r2: no runner, one height.",
+      "consequence": "r1's headline question is still open after five rounds.",
+      "would_need": "A second RUNNERS card."
+    }
+  ],
+  "findings": [
+    {
+      "what": "r3's hypothesis splits cleanly: the mechanism is right, the number is ~10x out.",
+      "am_says": "sigma_f_c_single <= 3 %, and what binds is T_obs rather than the samples-per-tau convention.",
+      "bd_says": "29.1 +/- 0.9 % measured at the stated envelope. The second clause is confirmed: camera on/off is 2 % relative, T_obs 5 s -> 32.3 s is a factor 3.2.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "am"
+    },
+    {
+      "what": "The camera is not the problem, which is the opposite of what both sides expected.",
+      "am_says": "Exposure and localisation noise act directly on the equipartition alpha, so they were treated as the thing to model.",
+      "bd_says": "On the SCATTER of f_c they are worth 2 % relative. They are worth much more on the BIAS (+2.5 % -> +4.5 %), and on var(x) and therefore on alpha. Two different quantities were being conflated -- the camera matters for alpha, it does not matter for how reproducible f_c is.",
+      "kind": "assumption_mismatch",
+      "resolution_owner": "human"
+    },
+    {
+      "what": "r2's f_s >= 620 Hz is withdrawn in favour of AM's own 99 Hz.",
+      "am_says": "G14c wants f_s >= 10 f_c = 99 Hz; 520 fps clears it 5.3x.",
+      "bd_says": "Agreed, and measured. The tau_k/10 convention that produced 620 Hz is a convention; at this envelope the 16 % shortfall against it costs 2 % relative on the answering quantity. Where the convention does earn its keep is the estimator bias, which is a fit property.",
+      "kind": "convention_mismatch",
+      "resolution_owner": "bd"
+    }
+  ],
+  "out_of_scope": [
+    "h0 and the wall, carried over unchanged.",
+    "The equipartition alpha itself. This document is about f_c's reproducibility; the camera's effect on alpha is r4's corrected 7.7 %.",
+    "Whether 300 s per rung is affordable. That is D-3's arithmetic, not this side's."
+  ],
+  "derived_from": [
+    {
+      "ref": "am:bridge/threads/trap-stiffness-recovery/r3/ask_simulation.json",
+      "hash": "sha256:2f408e684ca4333a",
+      "rev": "f2e5f94",
+      "note": "the ask this answers."
+    },
+    {
+      "ref": "bd:bridge/threads/trap-stiffness-recovery/r4/ask_experiment.json",
+      "hash": "sha256:1099538c29c594bc",
+      "rev": "HEAD",
+      "note": "the correction this rests on. Read r4 first: r3 was drafted against a number r4 withdraws."
+    },
+    {
+      "ref": "bd:verify/detector_model.py",
+      "hash": "sha256:8fee871ff56bc2d5",
+      "rev": "a986c4d",
+      "note": "the camera layer: boxcar over t_exp, then additive Gaussian epsilon."
+    },
+    {
+      "ref": "bd:verify/verify_fc_estimator_bias.py",
+      "hash": "sha256:e8f5942515006b5f",
+      "rev": "a986c4d"
+    }
+  ],
+  "confirmed_by": null
+}
