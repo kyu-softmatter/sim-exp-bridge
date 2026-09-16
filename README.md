@@ -202,8 +202,32 @@ One question decides which: *does any downstream conclusion change?*
 | **it changes** | the claims. r2's `achieved_precision` — load-bearing, six dependents | a **new document** carrying `corrects[]` | one round document. Worth it |
 | **it does not** | the citation apparatus. r8's wrong `rev` — one token, no conclusion moves | **register both revisions** in the manifest (unsuffixed stays where existing citations point, `@r<N>` carries the current one) | one line |
 
-Both keep the document sealed; they differ only in publication cost. Demanding a
-full `ask_experiment` for a one-token `rev` is a rule that will not be kept.
+| **it does not, and the manifest cannot reach it** | a wrong `rev` *inside a document*. `--resolve` git-resolves it and never consults the manifest for that branch, so **no key you can add changes the outcome** | correct the string in place — if nothing cites the document | one line, in the document |
+
+Both of the first two keep the document sealed; they differ only in publication
+cost. Demanding a full `ask_experiment` for a one-token `rev` is a rule that
+will not be kept.
+
+**The third row was missing and the AM session found it by trying to apply the
+table.** It was told to register a `@r<N>` key for r9's dead rev and correctly
+did not: the wrong thing was a `rev` string inside r9, the manifest key for the
+target was already right, and `--resolve` fails that citation by asking git,
+not by asking `hashes.json`. A remedy has to reach the defect, and the two-row
+version of this table silently assumed every citation defect lives in the
+manifest.
+
+### Sealed by commit is not sealed by citation
+
+Both had been called "sealed" in conversation, and **only the second one
+cascades.** The rule in this section is *a cited document is not edited* — the
+test is "is it cited?", not "is it committed?". r9 was committed and cited by
+nothing, with its hash in no manifest key, so correcting it in place moved
+nothing anybody depended on. r7 was the opposite and is why the cascade rule
+exists.
+
+The distinction was already correct in this file and wrong in the messages
+around it, which is its own small instance of the thing this document keeps
+recording.
 
 **The test has since refused something, which is the evidence it is a test.**
 r8 states "7.2 to 9.5 %, which is 1.8× the tolerance" — but a range is not one
@@ -272,7 +296,9 @@ time the unsuffixed key stayed where existing citations point.
 ### The resolve branch — R6 opens the file
 
 ```bash
-python3 validate.py --resolve --root am=PATH --root bd=PATH
+python3 validate.py --resolve \
+  --root am=~/Desktop/agentic-microscope/.claude/worktrees/work-2026-09-16 \
+  --root bd=~/Desktop/Brownian-Dynamics-Agent
 ```
 
 R6 compares a citation against `hashes.json`: **both sides of that comparison
