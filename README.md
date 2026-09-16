@@ -1103,10 +1103,38 @@ rounds had framed it as a missing capability, and r1's own `wall_drag` assumptio
 had already named the alternative: test the fit procedure on a synthetic
 `gamma(h)`, do not report a number from an infinite medium.
 
-The thread's one remaining decision point is AM's precondition P7, and it is
-`needs_data_transfer` with `owner: human`: the 2026-09-03 tracked positions live
-on the instrument PC under `D:\codes`, and the AM repository holds no trajectory
-data at all. No instrument time is needed — only the bytes.
+The thread's one remaining decision point was AM's precondition P7 — the
+per-rung scatter on real data, which the primary route's error budget rests on
+and which nobody has measured. **The operator has since decided not to pursue
+the 2026-09-03 file** (KH, 2026-09-16), so the scatter stays unmeasured as a
+standing state rather than a gap awaiting closure, r1's falsifier stays decided
+on simulated evidence with D-7's posture unchanged, and `calibration/cli.py
+drag-slope` sits built and tested waiting for an input a future acquisition can
+supply. The tool is not wasted; its 2026-09-03 input is.
+
+### A withdrawn route is not a withdrawn requirement
+
+I read that decision as making the gap `out_of_scope`, and AM was right to
+refuse it. The gap is written as **the quantity wanted** — the per-rung scatter
+on real data — and that is still wanted. What the operator closed was **one
+route to it**. Marking the gap `out_of_scope` would say the number no longer
+matters, when the error budget still rests on it.
+
+The temptation is structural: the enum has a value meaning "deliberately
+excluded", and a decision that closes something reaches for it. But what a
+decision usually closes is a **means**.
+
+> **Phrase a gap as the quantity wanted, not as the action pending.**
+
+Had it been written "read the 2026-09-03 positions", `out_of_scope` would have
+been exactly right — and the gap would have died with its route. Written as the
+quantity, it survives the route and keeps pointing at what is missing. The
+wording is what made the correct answer available, and `needs_human_action`
+remains it.
+
+No round is owed for this. r9's correction is published and correct, and
+spending a round to change an enum to a value that is wrong would be worse than
+the mismatch it fixes.
 
 ## Transport — what is actually needed to move a file
 
