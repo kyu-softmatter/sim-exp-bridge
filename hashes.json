@@ -14,5 +14,6 @@
   "bd:verify/verify_detector_model.py": "sha256:d022b00b2f50b166",
   "bd:verify/_out/fc_estimator_bias.json": "sha256:b48c48c94ad2f0be",
   "_bd_note": "bd: keys are added by the BD session. The verify/ entries are at rev a986c4d on branch microscope-link-survey, which is where r4's numbers come from -- not yet on BD's main. Every ref citing them carries `rev`, so R6 checks a named revision rather than whatever a path currently resolves to.",
-  "bd:bridge/threads/trap-stiffness-recovery/r4/ask_experiment.json": "sha256:1099538c29c594bc"
+  "bd:bridge/threads/trap-stiffness-recovery/r4/ask_experiment.json": "sha256:1099538c29c594bc",
+  "bd:bridge/threads/trap-stiffness-recovery/r5/ask_experiment.json": "sha256:4ac1cf0d7d2f2a3e"
 }

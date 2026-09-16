@@ -154,10 +154,9 @@
         "symbol": "k_t",
         "value": 3.5054,
         "unit": "pN/um",
-        "source": "as sent, model value",
+        "source": "as sent, model value Tier dropped 2026-09-15 under C2: `evidence` is authoritative and a `computed` value reaches only {1,3} via T1, so the 2 was never derivable. r1 no longer ships it either.",
         "evidence": "computed",
-        "origin": "am",
-        "tier": 2
+        "origin": "am"
       },
       {
         "symbol": "h_nominal",
@@ -210,10 +209,9 @@
         "symbol": "gamma_corr",
         "value": 0.056587,
         "unit": "pN*s/um",
-        "source": "gamma_0 x 1.211, YOUR declared Faxen factor at h = 8 um. Not this repository's physics, carried so the timescales are comparable to your tables. Labelled round_trip per R5b.",
+        "source": "gamma_0 x 1.211, YOUR declared Faxen factor at h = 8 um. Not this repository's physics, carried so the timescales are comparable to your tables. Labelled round_trip per R5b. Tier dropped: `round_trip` has no tier at all, which is the point of the label -- a number that came home is not evidence of any grade.",
         "evidence": "round_trip",
-        "origin": "am",
-        "tier": 3
+        "origin": "am"
       },
       {
         "symbol": "l_k",
