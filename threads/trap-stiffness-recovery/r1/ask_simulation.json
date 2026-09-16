@@ -2,144 +2,259 @@
   "schema": "softmatter.ask_simulation/0.1",
   "direction": "experiment_to_simulation",
   "origin": "am",
-  "thread": { "id": "trap-stiffness-recovery", "round": 1, "reply_to": null },
+  "thread": {
+    "id": "trap-stiffness-recovery",
+    "round": 1,
+    "reply_to": null
+  },
   "status": "draft",
-
   "plan_ref": {
     "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md",
     "hash": "sha256:58cfc405231a2970",
-    "note": "status: planned. The plan does not cross; only this ask does."
+    "note": "status: planned. The plan does not cross; only this ask does.",
+    "rev": "9f971a8"
   },
-
   "claim": "On a six-rung height ladder (h = 3.0-10 um, one bead at a = 2.475 um), combining the drag slope x_eq(v) with the equipartition stiffness kT/var(x) separates gamma_corr(h) from alpha, and a least-squares fit of gamma(dz) = gamma_0/(1 - 9a/(16(dz + h0))) recovers the unknown focal-plane-to-trap offset h0 to +/-0.195 um and gamma_bulk to 2.1 %, unbiased.",
-
   "answering_quantity": {
     "symbol": "h0",
     "unit": "um",
     "why": "The absolute trapping height above the coverslip. It is the dominant systematic on alpha, it is unmeasured on this instrument, and SAFETY section 9 lists it as an open safety question. Everything else in the run is a means to it."
   },
-
   "required_precision": {
     "value": 0.2,
     "unit": "um",
     "basis": "AM's own 400-realisation numpy estimate at 3 % per point (seed 3) claims +/-0.195 um. This ask exists because that estimate was made with a toy noise model, not with Brownian dynamics: it assumed 3 % Gaussian error per rung and nothing else.",
     "set_by": "am"
   },
-
   "what_would_change_my_mind": "If the fit's recovered h0 is biased, or its scatter exceeds ~0.4 um once finite T_obs, motion blur and localisation noise are included, then the ladder does not produce a trapping height and the run should be redesigned around a direct z datum instead. A bias larger than the scatter would be worse than a larger scatter: it would make every alpha in the series wrong in the same direction.",
-
   "system_primitives": [
-    { "symbol": "d", "value": 4.95, "unit": "um",
+    {
+      "symbol": "d",
+      "value": 4.95,
+      "unit": "um",
       "source": "data/particles.yaml bangs-dragongreen-5um-cooh, measured lot mean",
-      "evidence": "measured", "origin": "am", "tier": 0,
-      "uncertainty": { "value": 0.15, "unit": "um", "kind": "systematic" } },
-
-    { "symbol": "rho_particle", "value": 1.05, "unit": "g/cm^3",
+      "evidence": "measured",
+      "origin": "am",
+      "tier": 0,
+      "uncertainty": {
+        "value": 0.15,
+        "unit": "um",
+        "kind": "systematic"
+      }
+    },
+    {
+      "symbol": "rho_particle",
+      "value": 1.05,
+      "unit": "g/cm^3",
       "source": "data/particles.yaml > materials, polystyrene",
-      "evidence": "handbook", "origin": "am", "tier": 0 },
-
-    { "symbol": "T", "value": 293.15, "unit": "K",
+      "evidence": "handbook",
+      "origin": "am",
+      "tier": 0
+    },
+    {
+      "symbol": "T",
+      "value": 293.15,
+      "unit": "K",
       "source": "trapping.gate default. NOT MEASURED -- precondition P3 of the plan blocks on a thermometer at the sample. Sent as assumed on purpose so BD does not inherit it as tier 0.",
-      "evidence": "assumed", "origin": "am", "tier": 3,
-      "uncertainty": { "value": 2.0, "unit": "K", "kind": "half_range" } },
-
-    { "symbol": "eta", "value": 1.0016e-3, "unit": "Pa*s",
+      "evidence": "assumed",
+      "origin": "am",
+      "tier": 3,
+      "uncertainty": {
+        "value": 2.0,
+        "unit": "K",
+        "kind": "half_range"
+      }
+    },
+    {
+      "symbol": "eta",
+      "value": 0.0010016,
+      "unit": "Pa*s",
       "source": "trapping.dynamics.water_viscosity_pa_s(20). Computed from T, which is assumed -- so this inherits the assumption, at 2.4 %/K.",
-      "evidence": "computed", "origin": "am", "tier": 3 },
-
-    { "symbol": "k_t", "value": 3.5054, "unit": "pN/um",
+      "evidence": "computed",
+      "origin": "am",
+      "tier": 3
+    },
+    {
+      "symbol": "k_t",
+      "value": 3.5054,
+      "unit": "pN/um",
       "source": "trapping/goa.py force-curve --dial 1 at 100x Oil (NA 1.45 -> effective 1.325, n_bead 1.5715, n_medium 1.3245), a = 2.475 um. A MODEL value, not a measurement: the model predicts exactly alpha = 8.68/a and nothing else, which is what the run tests.",
-      "evidence": "computed", "origin": "am", "tier": 2 },
-
-    { "symbol": "h_nominal", "value": 8.0, "unit": "um",
+      "evidence": "computed",
+      "origin": "am",
+      "tier": 2
+    },
+    {
+      "symbol": "h_nominal",
+      "value": 8.0,
+      "unit": "um",
       "source": "One rung of the ladder, quoted as the reference rung. The ABSOLUTE height is h = dz_piezo + h0 with h0 unknown -- that is the answering quantity, so this number is the piezo reading, not the height.",
-      "evidence": "assumed", "origin": "am", "tier": 3 },
-
-    { "symbol": "pixel_size", "value": 0.06453, "unit": "um",
+      "evidence": "assumed",
+      "origin": "am",
+      "tier": 3
+    },
+    {
+      "symbol": "pixel_size",
+      "value": 0.06453,
+      "unit": "um",
       "source": "data/pixel_size.yaml, 100x 1x1, two length standards agreeing to 0.24 %",
-      "evidence": "measured", "origin": "am", "tier": 0 }
+      "evidence": "measured",
+      "origin": "am",
+      "tier": 0
+    }
   ],
-
   "instrument_envelope": [
-    { "symbol": "f_s", "max": 520, "unit": "Hz", "hard": true,
-      "from": "ROI 256(W)x512(H) px at 16-bit DynamicRange, from the 2026-09-10 drag-calibration operating envelope. Width sets the data rate (<=271 px), height sets the frame rate. 520 fps is its chosen operating point, off the boundary on purpose." },
-
-    { "symbol": "t_exp", "max": 0.576, "unit": "ms", "hard": true,
-      "from": "Exposure ceiling at 520 fps under the <=30 % duty rule; the run uses 0.45 ms. This camera takes the exposure as the frame period." },
-
-    { "symbol": "T_obs_per_rung", "target": 5.0, "unit": "s", "hard": false,
-      "from": "Sequence step 9c: 5 s of the held bead with the drive stopped, which is the block var(x) and the Lorentzian f_c come from. Extendable, but every extra second is paid at every rung of every size." },
-
-    { "symbol": "h", "min": 3.0, "max": 10.0, "unit": "um", "hard": true,
-      "from": "Near end: the 9a/(16h) expansion refuses h <= a, and a = 2.475 um leaves 0.5 um clearance at h = 3.0. Far end: lens 4's RI-mismatch screening limit 1.85/|dn| for an oil objective in water." },
-
-    { "symbol": "epsilon_localisation", "target": 10.0, "unit": "nm", "hard": false,
-      "from": "Assumed pending measurement on a coverslip-stuck bead (precondition P8). At 10 nm against a 34 nm thermal amplitude it is already ~9 % of var(x), which is why the plan measures rather than assumes it." }
+    {
+      "symbol": "f_s",
+      "max": 520,
+      "unit": "Hz",
+      "hard": true,
+      "from": "ROI 256(W)x512(H) px at 16-bit DynamicRange, from the 2026-09-10 drag-calibration operating envelope. Width sets the data rate (<=271 px), height sets the frame rate. 520 fps is its chosen operating point, off the boundary on purpose."
+    },
+    {
+      "symbol": "t_exp",
+      "max": 0.576,
+      "unit": "ms",
+      "hard": true,
+      "from": "Exposure ceiling at 520 fps under the <=30 % duty rule; the run uses 0.45 ms. This camera takes the exposure as the frame period."
+    },
+    {
+      "symbol": "T_obs_per_rung",
+      "target": 5.0,
+      "unit": "s",
+      "hard": false,
+      "from": "Sequence step 9c: 5 s of the held bead with the drive stopped, which is the block var(x) and the Lorentzian f_c come from. Extendable, but every extra second is paid at every rung of every size."
+    },
+    {
+      "symbol": "h",
+      "min": 3.0,
+      "max": 10.0,
+      "unit": "um",
+      "hard": true,
+      "from": "Near end: the 9a/(16h) expansion refuses h <= a, and a = 2.475 um leaves 0.5 um clearance at h = 3.0. Far end: lens 4's RI-mismatch screening limit 1.85/|dn| for an oil objective in water."
+    },
+    {
+      "symbol": "epsilon_localisation",
+      "target": 10.0,
+      "unit": "nm",
+      "hard": false,
+      "from": "Assumed pending measurement on a coverslip-stuck bead (precondition P8). At 10 nm against a 34 nm thermal amplitude it is already ~9 % of var(x), which is why the plan measures rather than assumes it."
+    }
   ],
-
   "assumptions": [
-    { "name": "dimensionality", "status": "unknown",
+    {
+      "name": "dimensionality",
+      "status": "unknown",
       "mine": "3D chamber. The trap has axial stiffness, the drive and the measurement are both in x, and only the parallel-to-wall correction is claimed.",
-      "theirs": null, "worth": null,
-      "note": "BD's trap-2d-5um is dimensions: 2. Its own structure block argues the 2D choice is harmless for per-component observables (x^2, C(t), PSD, f_c) and load-bearing only for <r^2> and the total MSD. h0 comes from a per-component fit, so this may be shared in effect -- but it has to be stated, not inferred." },
-
-    { "name": "wall_drag", "status": "unknown",
+      "theirs": null,
+      "worth": null,
+      "note": "BD's trap-2d-5um is dimensions: 2. Its own structure block argues the 2D choice is harmless for per-component observables (x^2, C(t), PSD, f_c) and load-bearing only for <r^2> and the total MSD. h0 comes from a per-component fit, so this may be shared in effect -- but it has to be stated, not inferred."
+    },
+    {
+      "name": "wall_drag",
+      "status": "unknown",
       "mine": "Faxen, parallel, first order: gamma_corr = gamma_0/(1 - 9a/(16h)). +16 % at h = 10 um to +87 % at h = 3.0 um. sample.aberration.wall_drag_suppression refuses h <= a rather than returning a number.",
-      "theirs": null, "worth": null,
-      "note": "This is the whole point of the run, and BD's trap case has no wall at all. If BD cannot put a wall in, it can still test the FIT PROCEDURE on a synthetic gamma(h) -- say so rather than reporting a number from an infinite medium." },
-
-    { "name": "medium", "status": "unknown",
+      "theirs": null,
+      "worth": null,
+      "note": "This is the whole point of the run, and BD's trap case has no wall at all. If BD cannot put a wall in, it can still test the FIT PROCEDURE on a synthetic gamma(h) -- say so rather than reporting a number from an infinite medium."
+    },
+    {
+      "name": "medium",
+      "status": "unknown",
       "mine": "Newtonian water at 20 C, no viscoelasticity, no hydrodynamic memory.",
-      "theirs": null, "worth": null },
-
-    { "name": "camera_model", "status": "unknown",
+      "theirs": null,
+      "worth": null
+    },
+    {
+      "name": "camera_model",
+      "status": "unknown",
       "mine": "Finite exposure 0.45 ms deflates var(x) by 2*D*t_exp/3 = 1.86 % at h = 8 um; localisation noise epsilon inflates it by ~9 % at epsilon = 10 nm. Both act on the equipartition alpha, i.e. directly on the quantity this ask is about.",
-      "theirs": null, "worth": null,
-      "note": "A pure BD trajectory has neither. If BD cannot add them, that gap is the most important thing this round can report -- the toy estimate this ask is testing also omitted them." },
-
-    { "name": "particle_count", "status": "unknown",
+      "theirs": null,
+      "worth": null,
+      "note": "A pure BD trajectory has neither. If BD cannot add them, that gap is the most important thing this round can report -- the toy estimate this ask is testing also omitted them."
+    },
+    {
+      "name": "particle_count",
+      "status": "unknown",
       "mine": "One isolated bead per ROI, enforced by precondition P6. Six near-identical blobs in one field produced six plausible and wrong fits on 2026-09-03.",
-      "theirs": null, "worth": null,
-      "note": "BD's N = 1000 is a replica ensemble for statistics, not a suspension. If that is how it answers, the error bar it reports is NOT the error bar of one experimental bead." },
-
-    { "name": "trap_linearity", "status": "unknown",
+      "theirs": null,
+      "worth": null,
+      "note": "BD's N = 1000 is a replica ensemble for statistics, not a suspension. If that is how it answers, the error bar it reports is NOT the error bar of one experimental bead."
+    },
+    {
+      "name": "trap_linearity",
+      "status": "unknown",
       "mine": "x_eq <= 0.15a keeps the bead inside the linear region; the run stops a velocity if x_eq exceeds ~0.3a.",
-      "theirs": null, "worth": null },
-
-    { "name": "inertia", "status": "unknown",
+      "theirs": null,
+      "worth": null
+    },
+    {
+      "name": "inertia",
+      "status": "unknown",
       "mine": "Neglected. Overdamped throughout.",
-      "theirs": null, "worth": null },
-
-    { "name": "drift", "status": "unknown",
+      "theirs": null,
+      "worth": null
+    },
+    {
+      "name": "drift",
+      "status": "unknown",
       "mine": "z drift held under ~0.3 um within a rung by a witness against a stuck bead (P10). A monotonic drift and the Faxen curve have the same shape, so this is not a nuisance term -- it moves the measurand.",
-      "theirs": null, "worth": null,
-      "note": "Nothing in a simulation corresponds to this. It is declared so the comparison is not read as covering it." }
+      "theirs": null,
+      "worth": null,
+      "note": "Nothing in a simulation corresponds to this. It is declared so the comparison is not read as covering it."
+    }
   ],
-
   "reference_only": [
-    { "symbol": "f_c", "value": 9.9, "unit": "Hz",
+    {
+      "symbol": "f_c",
+      "value": 9.9,
+      "unit": "Hz",
       "source": "AM gate table at a = 2.475 um, h = 8 um. NON-BINDING: derive your own before reading this.",
-      "evidence": "computed", "origin": "am", "tier": 2 },
-    { "symbol": "gamma_corr_over_gamma_0", "value": 1.211, "unit": "dimensionless",
+      "evidence": "computed",
+      "origin": "am",
+      "tier": 2
+    },
+    {
+      "symbol": "gamma_corr_over_gamma_0",
+      "value": 1.211,
+      "unit": "dimensionless",
       "source": "Faxen at h = 8 um, s = 9a/(16h) = 0.174",
-      "evidence": "computed", "origin": "am", "tier": 2 },
-    { "symbol": "sqrt_kT_over_alpha", "value": 34.0, "unit": "nm",
+      "evidence": "computed",
+      "origin": "am",
+      "tier": 2
+    },
+    {
+      "symbol": "sqrt_kT_over_alpha",
+      "value": 34.0,
+      "unit": "nm",
       "source": "Thermal amplitude at alpha = 3.5 pN/um",
-      "evidence": "computed", "origin": "am", "tier": 2 },
-    { "symbol": "v_drive", "value": 23.0, "unit": "um/s",
+      "evidence": "computed",
+      "origin": "am",
+      "tier": 2
+    },
+    {
+      "symbol": "v_drive",
+      "value": 23.0,
+      "unit": "um/s",
       "source": "Velocity giving x_eq = 0.15a at h = 8 um",
-      "evidence": "computed", "origin": "am", "tier": 2 },
-    { "symbol": "blur_on_var_x", "value": 1.86, "unit": "percent",
+      "evidence": "computed",
+      "origin": "am",
+      "tier": 2
+    },
+    {
+      "symbol": "blur_on_var_x",
+      "value": 1.86,
+      "unit": "percent",
       "source": "2*D*t_exp/3 at 0.45 ms, h = 8 um",
-      "evidence": "computed", "origin": "am", "tier": 2 }
+      "evidence": "computed",
+      "origin": "am",
+      "tier": 2
+    }
   ],
-
   "out_of_scope": [
     "The perpendicular Faxen coefficient. The drive is in x, so nothing here licenses an axial claim.",
     "Trap heating. Lens 7's silence on it is not heating cleared.",
     "alpha(a) across sizes. Precondition P0 blocks it: only two registered sizes exist, spanning 1.24x, against a ~8 % systematic. This ask is about the height ladder on ONE bead."
   ],
-
   "derived_from": [],
   "confirmed_by": null
 }

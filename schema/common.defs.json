@@ -5,160 +5,368 @@
   "$defs": {
     "repo": {
       "description": "Which agent produced a thing. Never inferred.",
-      "enum": ["am", "bd"]
+      "enum": [
+        "am",
+        "bd"
+      ]
     },
-
     "evidence": {
       "description": "How a number came to exist. Maps to BD tier at import time, never guessed.",
-      "enum": ["measured", "handbook", "computed", "assumed", "simulated", "round_trip"]
+      "enum": [
+        "measured",
+        "handbook",
+        "computed",
+        "assumed",
+        "simulated",
+        "round_trip"
+      ]
     },
-
     "ref": {
       "description": "A pointer into the other repo. 'am:' / 'bd:' prefix is load-bearing.",
       "type": "object",
-      "required": ["ref", "hash"],
+      "required": [
+        "ref",
+        "hash"
+      ],
       "additionalProperties": false,
       "properties": {
-        "ref":   { "type": "string", "pattern": "^(am|bd):[^\\s]+$" },
-        "field": { "type": "string", "description": "dotted path inside the referenced artefact" },
-        "hash":  { "type": "string", "pattern": "^sha256:[0-9a-f]{8,64}$" },
-        "note":  { "type": "string" }
+        "ref": {
+          "type": "string",
+          "pattern": "^(am|bd):[^\\s]+$"
+        },
+        "field": {
+          "type": "string",
+          "description": "dotted path inside the referenced artefact"
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{8,64}$"
+        },
+        "note": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "string",
+          "minLength": 4,
+          "description": "Git revision the path was read at -- a commit sha, or a branch name if that is all that is known. Optional but strongly wanted: a path-only ref is ambiguous across branches. Observed 2026-09-15 on exactly this thread's plan file, which is 58cfc405 on main, 514da4a0 on worktree-work-2026-09-16, and absent from version2 -- three different answers to one ref."
+        }
       }
     },
-
     "quantity": {
       "description": "A dimensional value in the unit it was MEASURED in. Never pre-normalised to SI by the sender -- see README rule W2.",
       "type": "object",
-      "required": ["symbol", "value", "unit", "source", "evidence", "origin"],
+      "required": [
+        "symbol",
+        "value",
+        "unit",
+        "source",
+        "evidence",
+        "origin"
+      ],
       "additionalProperties": false,
       "properties": {
-        "symbol":   { "type": "string" },
-        "value":    { "type": "number" },
-        "unit":     { "type": "string", "description": "pint-parseable. 'dimensionless' for pure numbers." },
-        "source":   { "type": "string", "minLength": 3 },
-        "evidence": { "$ref": "common.defs.json#/$defs/evidence" },
-        "origin":   { "$ref": "common.defs.json#/$defs/repo" },
-        "tier":     { "type": "integer", "minimum": 0, "maximum": 3,
-                      "description": "BD tier. Optional on the wire: the importer derives it from `evidence` via README table T1." },
+        "symbol": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "description": "pint-parseable. 'dimensionless' for pure numbers."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 3
+        },
+        "evidence": {
+          "$ref": "common.defs.json#/$defs/evidence"
+        },
+        "origin": {
+          "$ref": "common.defs.json#/$defs/repo"
+        },
+        "tier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "BD tier. Optional on the wire: the importer derives it from `evidence` via README table T1."
+        },
         "uncertainty": {
           "type": "object",
-          "required": ["value", "unit", "kind"],
+          "required": [
+            "value",
+            "unit",
+            "kind"
+          ],
           "additionalProperties": false,
           "properties": {
-            "value": { "type": "number", "minimum": 0 },
-            "unit":  { "type": "string" },
-            "kind":  { "enum": ["1sigma", "half_range", "systematic", "unknown"] }
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "unit": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "1sigma",
+                "half_range",
+                "systematic",
+                "unknown"
+              ]
+            }
           }
         },
         "chain": {
-          "type": "array", "items": { "$ref": "common.defs.json#/$defs/ref" },
+          "type": "array",
+          "items": {
+            "$ref": "common.defs.json#/$defs/ref"
+          },
           "description": "Ancestry of THIS number. Required for the cycle check (validator rule R5)."
         }
       }
     },
-
     "requirement": {
       "description": "A dimensional range the receiving agent's own gates can check directly. BD produces these by inverse-mapping a dimensionless group; AM consumes them without ever seeing the group.",
       "type": "object",
-      "required": ["symbol", "unit", "from", "hard"],
+      "required": [
+        "symbol",
+        "unit",
+        "from",
+        "hard"
+      ],
       "additionalProperties": false,
       "properties": {
-        "symbol": { "type": "string" },
-        "min":    { "type": "number" },
-        "max":    { "type": "number" },
-        "target": { "type": "number" },
-        "unit":   { "type": "string" },
-        "hard":   { "type": "boolean", "description": "false = degrades the answer, true = invalidates it" },
-        "from":   { "type": "string", "minLength": 10,
-                    "description": "Prose derivation. NOT binding on the receiver's machinery; it exists so a human can audit the inverse map." },
-        "basis_group": { "type": "string", "description": "name of the group in `regime` this came from" },
-        "basis_refs":  { "type": "array", "items": { "$ref": "common.defs.json#/$defs/ref" } }
+        "symbol": {
+          "type": "string"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "target": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "hard": {
+          "type": "boolean",
+          "description": "false = degrades the answer, true = invalidates it"
+        },
+        "from": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Prose derivation. NOT binding on the receiver's machinery; it exists so a human can audit the inverse map."
+        },
+        "basis_group": {
+          "type": "string",
+          "description": "name of the group in `regime` this came from"
+        },
+        "basis_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.defs.json#/$defs/ref"
+          }
+        }
       }
     },
-
     "group": {
       "description": "A dimensionless group. Shape deliberately matches bdbot spec.json `groups[]` so BD's adapter is a copy.",
       "type": "object",
-      "required": ["name", "value", "expr", "meaning"],
+      "required": [
+        "name",
+        "value",
+        "expr",
+        "meaning"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name":    { "type": "string" },
-        "value":   { "type": "number" },
-        "expr":    { "type": "string" },
-        "meaning": { "type": "string" },
-        "tolerance":           { "type": "string", "description": "e.g. 'within x2', '< 1e-3'. Prose because the admissible form differs per group." },
-        "why_this_tolerance":  { "type": "string", "minLength": 10,
-                                 "description": "Sensitivity of answering_quantity to this group. Taste is not an answer." },
-        "counterpart": { "type": ["number", "null"], "description": "the other side's value for the same group, if known" }
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        },
+        "expr": {
+          "type": "string"
+        },
+        "meaning": {
+          "type": "string"
+        },
+        "tolerance": {
+          "type": "string",
+          "description": "e.g. 'within x2', '< 1e-3'. Prose because the admissible form differs per group."
+        },
+        "why_this_tolerance": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Sensitivity of answering_quantity to this group. Taste is not an answer."
+        },
+        "counterpart": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "the other side's value for the same group, if known"
+        }
       }
     },
-
     "assumption": {
       "description": "The ONLY block that cannot be derived from numbers. 'no Faxen wall correction' does not follow from any value, so it must cross explicitly.",
       "type": "object",
-      "required": ["name", "mine", "status"],
+      "required": [
+        "name",
+        "mine",
+        "status"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name":   { "type": "string" },
-        "mine":   { "type": "string", "description": "what MY side assumes" },
-        "theirs": { "type": ["string", "null"], "description": "what the other side assumes, once known" },
-        "status": { "enum": ["shared", "differs", "unknown"] },
+        "name": {
+          "type": "string"
+        },
+        "mine": {
+          "type": "string",
+          "description": "what MY side assumes"
+        },
+        "theirs": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "what the other side assumes, once known"
+        },
+        "status": {
+          "enum": [
+            "shared",
+            "differs",
+            "unknown"
+          ]
+        },
         "worth": {
           "description": "How much this assumption moves answering_quantity. null = not yet quantified, which becomes next round's task.",
           "oneOf": [
-            { "type": "null" },
-            { "type": "object", "required": ["value", "unit"], "additionalProperties": false,
-              "properties": { "value": { "type": "number" }, "unit": { "type": "string" },
-                              "note": { "type": "string" } } }
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                }
+              }
+            }
           ]
         },
-        "note": { "type": "string" }
+        "note": {
+          "type": "string"
+        }
       }
     },
-
     "thread": {
       "type": "object",
-      "required": ["id", "round"],
+      "required": [
+        "id",
+        "round"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id":       { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-        "round":    { "type": "integer", "minimum": 1 },
-        "reply_to": { "type": ["string", "null"], "description": "relative path of the ask this answers" }
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reply_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "relative path of the ask this answers"
+        }
       }
     },
-
     "status": {
       "description": "draft = an assumption is still `unknown`. blocked = evidence missing. unrunnable = capability missing (BD has no runner for the card / AM has no registered bead of that size).",
-      "enum": ["draft", "open", "answered", "answered_with_gaps", "blocked", "unrunnable", "abandoned"]
+      "enum": [
+        "draft",
+        "open",
+        "answered",
+        "answered_with_gaps",
+        "blocked",
+        "unrunnable",
+        "abandoned"
+      ]
     },
-
     "answering_quantity": {
       "type": "object",
-      "required": ["symbol", "unit", "why"],
+      "required": [
+        "symbol",
+        "unit",
+        "why"
+      ],
       "additionalProperties": false,
       "properties": {
-        "symbol": { "type": "string" },
-        "unit":   { "type": "string" },
-        "why":    { "type": "string", "minLength": 10 }
+        "symbol": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "why": {
+          "type": "string",
+          "minLength": 10
+        }
       }
     },
-
     "precision": {
       "description": "The one free number that MUST cross. Without it the receiver's gates are unconstrained and any plan passes.",
       "type": "object",
-      "required": ["value", "unit", "basis"],
+      "required": [
+        "value",
+        "unit",
+        "basis"
+      ],
       "additionalProperties": false,
       "properties": {
-        "value": { "type": "number", "exclusiveMinimum": 0 },
-        "unit":  { "type": "string" },
-        "basis": { "type": "string", "minLength": 10 },
-        "set_by": { "$ref": "common.defs.json#/$defs/repo" }
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 10
+        },
+        "set_by": {
+          "$ref": "common.defs.json#/$defs/repo"
+        }
       }
     },
-
     "confirmed_by": {
       "description": "HUMAN ONLY. Validator rule R7 refuses any machine-looking name.",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     }
   }
 }

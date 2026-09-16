@@ -121,6 +121,13 @@ Two properties matter more than the file format:
   citation. Both repositories already have supersession machinery
   (`superseded_by` / `corrected_by`); use it.
 
+## 리비전 없는 ref는 ref가 아니다
+
+`ref`에 `rev`(커밋 sha, 없으면 브랜치명)를 같이 싣는다. 경로만 있는 참조는 브랜치마다
+다른 답을 준다 — 이 스레드의 plan 파일이 실제로 그랬다: `main`에서 `58cfc405`,
+`worktree-work-2026-09-16`에서 `514da4a0`, `version2`에는 **아예 없다**. 하나의 ref에
+세 가지 답이 나오면 R6의 해시 검사는 무엇을 검사하는지 모르는 상태가 된다.
+
 ## Layout
 
 ```

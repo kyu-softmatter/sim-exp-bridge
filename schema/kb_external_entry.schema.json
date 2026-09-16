@@ -4,35 +4,95 @@
   "title": "Frontmatter of an imported KB entry",
   "description": "Lands at kb/external/bd/<id>.md (AM side) or knowledge/external/am/<id>.md (BD side). Path carries the foreign origin so a citation is self-describing; a frontmatter field alone is not enough, because AM plans cite by path.",
   "type": "object",
-  "required": ["id", "origin", "source_ref", "source_hash", "evidence_class",
-               "may_be_gate_threshold", "thread", "imported", "superseded_by", "confirmed_by"],
+  "required": [
+    "id",
+    "origin",
+    "source_ref",
+    "source_hash",
+    "evidence_class",
+    "may_be_gate_threshold",
+    "thread",
+    "imported",
+    "superseded_by",
+    "confirmed_by"
+  ],
   "additionalProperties": false,
   "properties": {
-    "id":     { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
-    "origin": { "$ref": "common.defs.json#/$defs/repo" },
-
-    "source_ref":  { "type": "string", "pattern": "^(am|bd):[^\\s]+$" },
-    "source_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{8,64}$",
-                     "description": "Checked by the importing repo's own check CLI. Upstream drift flags every plan citing this entry." },
-
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*$"
+    },
+    "origin": {
+      "$ref": "common.defs.json#/$defs/repo"
+    },
+    "source_ref": {
+      "type": "string",
+      "pattern": "^(am|bd):[^\\s]+$"
+    },
+    "source_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{8,64}$",
+      "description": "Checked by the importing repo's own check CLI. Upstream drift flags every plan citing this entry."
+    },
     "evidence_class": {
-      "enum": ["measured", "simulated", "computed", "assumed", "round_trip"],
+      "enum": [
+        "measured",
+        "simulated",
+        "computed",
+        "assumed",
+        "round_trip"
+      ],
       "description": "Surfaced at citation time. A simulated f_c must never sit in kb/calibrations/, which means 'measured on this instrument'."
     },
-
     "may_be_gate_threshold": {
       "type": "boolean",
       "description": "false for everything imported by default. A gate that clears against a simulated threshold emits a margin that looks measured -- the disease AM hard rule 3 already names."
     },
-
-    "derived_from": { "type": "array", "items": { "$ref": "common.defs.json#/$defs/ref" } },
-    "thread":       { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*/r[0-9]+$" },
-    "imported":     { "type": "string", "format": "date" },
-
-    "supersedes":    { "type": ["string", "null"] },
-    "superseded_by": { "type": ["string", "null"],
-                       "description": "Lifecycle is supersession, not deletion. A deleted import dangles every decision that cited it." },
-    "corrected_by":  { "type": ["string", "null"] },
-    "confirmed_by":  { "$ref": "common.defs.json#/$defs/confirmed_by" }
+    "derived_from": {
+      "type": "array",
+      "items": {
+        "$ref": "common.defs.json#/$defs/ref"
+      }
+    },
+    "thread": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*/r[0-9]+$"
+    },
+    "imported": {
+      "type": "string",
+      "format": "date"
+    },
+    "supersedes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "superseded_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Lifecycle is supersession, not deletion. A deleted import dangles every decision that cited it."
+    },
+    "corrected_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "confirmed_by": {
+      "$ref": "common.defs.json#/$defs/confirmed_by"
+    },
+    "question": {
+      "type": "string",
+      "minLength": 10,
+      "description": "The question this import answers, in one line. Optional here because it is not part of the handoff -- but AM's knowledge/index.py requires it of every indexed entry, and an imported number absent from kb/INDEX.md is one nobody finds. Each repository enforces its own requirement; the wire only has to stop forbidding it."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Index metadata for the importing repository, same reason as `question`. Distinct from `imported`: `date` is the entry's own date in its KB, `imported` is when it crossed."
+    }
   }
 }
