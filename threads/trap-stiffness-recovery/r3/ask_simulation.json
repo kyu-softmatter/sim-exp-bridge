@@ -1,0 +1,149 @@
+{
+  "schema": "softmatter.ask_simulation/0.1",
+  "direction": "experiment_to_simulation",
+  "origin": "am",
+  "thread": { "id": "trap-stiffness-recovery", "round": 3, "reply_to": "../r2/ask_experiment.json" },
+  "status": "open",
+
+  "plan_ref": {
+    "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md@r3",
+    "hash": "sha256:514da4a0c550b783",
+    "field": "What Brownian dynamics answered, and the three decisions it hands back",
+    "note": "Same plan file as r1, revised by this round: it now carries D-1..D-4 answering r2's four findings. The r1-era hash 58cfc405231a2970 stays in hashes.json under the unsuffixed key so r1 and r2 keep verifying -- one manifest key per round of the sender's own plan, because a plan that does not change between rounds is a plan nobody answered. Proposed as a convention; no schema change."
+  },
+
+  "claim": "At this instrument's envelope -- f_s = 520 Hz, t_exp = 0.45 ms, T_obs = 5 s of held bead per rung, localisation noise epsilon = 10 nm -- the per-realisation relative error on the PSD-recovered f_c of a SINGLE trapped bead is at or below 3 %, and what binds it is the observation length rather than the samples-per-relaxation-time convention. If that holds, 520 fps is sufficient for this run and the 2*pi disagreement of r2's finding 1 is a naming difference rather than a design constraint.",
+
+  "answering_quantity": {
+    "symbol": "sigma_f_c_single",
+    "unit": "percent",
+    "why": "The per-realisation relative error -- one bead, not an ensemble -- on the recovered corner frequency, with exposure integration and Gaussian localisation noise applied to the trajectory before fitting. It settles all three open decisions at once: it can only be computed with the sampling layer of r2 gaps[1], it requires the n_replicas = 1 re-run of gaps[3], and evaluated at 520 Hz it says whether the convention of finding 1 binds. The equipartition alpha and every per-rung gamma inherit it directly."
+  },
+
+  "required_precision": {
+    "value": 1.0,
+    "unit": "percent",
+    "basis": "The decision this feeds is binary at about 3 %: the plan's error budget leaves roughly 3 % for the block that yields var(x) and f_c, so what is needed is which side of 3 % sigma_f_c_single falls on. One percentage point of resolution decides that and more is not worth simulator time. An absolute tolerance on a quantity that is itself a percentage.",
+    "set_by": "am"
+  },
+
+  "what_would_change_my_mind": "If sigma_f_c_single exceeds about 3 %, or if at 8.39 samples per relaxation time the Lorentzian fit comes back BIASED rather than merely noisier, then the sampling convention is a real constraint and not a naming difference: the ROI height has to be cut to reach 620 Hz, which costs frame rate at every size and re-opens lenses 2 and 3 together. A bias would be worse than a larger scatter, because it would move every recovered alpha in the same direction and would not show up as spread between rungs. Equally, if the error is dominated by epsilon rather than by T_obs, then lengthening the blocks is wasted effort and P8 is the only thing worth buying.",
+
+  "system_primitives": [
+    { "symbol": "d", "value": 4.95, "unit": "um",
+      "source": "data/particles.yaml bangs-dragongreen-5um-cooh, measured lot mean. Unchanged from r1 on purpose -- the same bead keeps this the same question.",
+      "evidence": "measured", "origin": "am", "tier": 0,
+      "uncertainty": { "value": 0.15, "unit": "um", "kind": "systematic" } },
+
+    { "symbol": "rho_particle", "value": 1.05, "unit": "g/cm^3",
+      "source": "data/particles.yaml > materials, polystyrene",
+      "evidence": "handbook", "origin": "am", "tier": 0 },
+
+    { "symbol": "T", "value": 293.15, "unit": "K",
+      "source": "trapping.gate default. STILL NOT MEASURED -- precondition P3 blocks on a thermometer at the sample and this round did not change that. Sent as assumed so it is not inherited at tier 0.",
+      "evidence": "assumed", "origin": "am", "tier": 3,
+      "uncertainty": { "value": 2.0, "unit": "K", "kind": "half_range" } },
+
+    { "symbol": "eta", "value": 1.0016e-3, "unit": "Pa*s",
+      "source": "trapping.dynamics.water_viscosity_pa_s(20). Computed from T, which is assumed, so it inherits the assumption at 2.4 %/K.",
+      "evidence": "computed", "origin": "am", "tier": 3 },
+
+    { "symbol": "k_t", "value": 3.5054, "unit": "pN/um",
+      "source": "trapping/goa.py force-curve --dial 1 at 100x Oil (NA 1.45 -> effective 1.325, n_bead 1.5715, n_medium 1.3245), a = 2.475 um. A MODEL value, not a measurement: the model predicts exactly alpha = 8.68/a and nothing else, which is what the run tests.",
+      "evidence": "computed", "origin": "am", "tier": 2 },
+
+    { "symbol": "h_nominal", "value": 8.0, "unit": "um",
+      "source": "The reference rung, as a piezo reading. The absolute height is h = dz_piezo + h0 and h0 is unknown -- r2 refused it for want of a wall runner, so this round does not ask about it and this number is not a height.",
+      "evidence": "assumed", "origin": "am", "tier": 3 },
+
+    { "symbol": "pixel_size", "value": 0.06453, "unit": "um",
+      "source": "data/pixel_size.yaml, 100x 1x1, two length standards agreeing to 0.24 %",
+      "evidence": "measured", "origin": "am", "tier": 0 }
+  ],
+
+  "instrument_envelope": [
+    { "symbol": "f_s", "max": 520, "unit": "Hz", "hard": true,
+      "from": "ROI 256(W)x512(H) px at 16-bit DynamicRange, from the 2026-09-10 drag-calibration operating envelope: width sets the data rate (<=271 px), height sets the frame rate. r2 asked for 620 Hz, which is 16 % above this cap -- reachable only by cutting the ROI height further, which re-opens lenses 2 and 3 together and is NOT assumed here. Answer at 520 Hz, which is what the instrument has." },
+
+    { "symbol": "t_exp", "max": 0.576, "unit": "ms", "hard": true,
+      "from": "Exposure ceiling at 520 fps under the <=30 % duty rule. The run uses 0.45 ms, and that is the value the blur should be integrated over: this camera takes the exposure as the frame period, so exposure and interval are not independent." },
+
+    { "symbol": "T_obs_per_rung", "target": 5.0, "unit": "s", "hard": false,
+      "from": "Sequence step 9c: 5 s of held bead with the drive stopped, which is where var(x) and the Lorentzian f_c come from. r2's soft requirement is 32.3 s. Buying it costs 5 s -> 32.3 s at EVERY rung of every size (six rungs, at least three sizes once P0 is resolved), against a drift witness that must hold for all of it -- so it is a decision and not an edit, and it is undecided as of this round. Answer at 5 s, and report what 32.3 s would buy." },
+
+    { "symbol": "epsilon_localisation", "target": 10.0, "unit": "nm", "hard": false,
+      "from": "Assumed pending measurement on a coverslip-stuck bead (precondition P8). r2 derived a hard ceiling of 7.6 nm; that ceiling is BD's own number and is deliberately NOT restated here as a requirement of this instrument, because a gate clearing against an imported number emits a margin that reads as measured. P8 measures epsilon; this round asks what the measured value would have to be." },
+
+    { "symbol": "h", "min": 3.0, "max": 10.0, "unit": "um", "hard": true,
+      "from": "Near end: the 9a/(16h) expansion refuses h <= a, and a = 2.475 um leaves 0.5 um clearance at h = 3.0. Far end: lens 4's RI-mismatch screening limit 1.85/|dn| for an oil objective in water. Carried for context only -- this round asks nothing about height." }
+  ],
+
+  "assumptions": [
+    { "name": "camera_model", "status": "differs",
+      "mine": "Finite exposure 0.45 ms deflates var(x) by 2*D*t_exp/3 = 1.86 % at the reference rung; localisation noise epsilon inflates it by about 9 % at epsilon = 10 nm. Both act on the equipartition alpha, i.e. directly on the quantity this thread is about.",
+      "theirs": "None. A BD trajectory is sampled exactly, with no exposure integration and no localisation error.",
+      "worth": { "value": 8.0, "unit": "percent",
+                 "note": "BD's own quantification in r2 -- net effect on the equipartition alpha at the assumed epsilon, dominated by epsilon rather than by blur -- copied rather than re-derived here." },
+      "note": "CLOSING THIS IS THE POINT OF THIS ROUND. r2 called the sampling layer cheap (integrate over t_exp, then add Gaussian epsilon) and named it gaps[1]. Until it exists the 1.17 % is a noise-free number and the 7.6 nm ceiling is analytic rather than simulated." },
+
+    { "name": "particle_count", "status": "differs",
+      "mine": "One isolated bead per ROI, enforced by precondition P6. Six near-identical blobs in one field produced six plausible and wrong fits on 2026-09-03.",
+      "theirs": "N = 1000 non-interacting replicas; the box is a container for replicas rather than a system.",
+      "worth": { "value": 0.0, "unit": "percent",
+                 "note": "BD's own quantification in r2: zero on the central value, NOT zero on the error bar -- one bead at the same observation length scatters about 32x more. r2 calls this the single most important line in that document, which is why this round's answering quantity is explicitly per-realisation." },
+      "note": "The second thing this round asks to close: gaps[3], a re-run at n_replicas = 1 over many seeds." },
+
+    { "name": "dimensionality", "status": "differs",
+      "mine": "3D chamber. The trap has axial stiffness, the drive and the measurement are both in x, and only the parallel-to-wall correction is claimed.",
+      "theirs": "dimensions: 2, basis `given` from the sketch's U(r) with r = sqrt(x^2+y^2).",
+      "worth": { "value": 0.0, "unit": "percent",
+                 "note": "BD's quantification in r2: zero on f_c, var(x), C(t) and the PSD, which are per-component and carry no dimension; non-zero only on <r^2> and the total MSD, neither of which this thread asks for." },
+      "note": "Declared differs rather than shared even at zero worth, following r2's own reasoning: the zero is conditional on the observable list and would stop holding silently if <r^2> were added." },
+
+    { "name": "wall_drag", "status": "differs",
+      "mine": "Faxen, parallel, first order: gamma_corr = gamma_0/(1 - 9a/(16h)), +16 % at h = 10 um to +87 % at h = 3.0 um. sample.aberration.wall_drag_suppression refuses h <= a rather than returning a number.",
+      "theirs": "No wall at all. gamma_0 = 6*pi*eta*a, infinite medium.",
+      "worth": { "value": 21.1, "unit": "percent",
+                 "note": "On gamma at the reference rung, hence 17.4 % on f_c -- and r2 states plainly that it took this from OUR declared factor rather than deriving it, so it is our own arithmetic coming home and is not independent." },
+      "note": "The largest declared difference, and structural rather than parametric. This round therefore asks nothing about the wall, the Faxen separation or h0: r2 refused them for want of a second runner card, and asking again before that card exists would be asking the trap runner to compute a system it does not contain." },
+
+    { "name": "medium", "status": "shared",
+      "mine": "Newtonian water at 20 C, no viscoelasticity, no hydrodynamic memory.",
+      "theirs": "Newtonian water, no hydrodynamic memory; the Basset term is named out_of_scope in that case's goal.",
+      "worth": null },
+
+    { "name": "inertia", "status": "shared",
+      "mine": "Neglected. Overdamped throughout.",
+      "theirs": "Overdamped, with the inertial ratio 8.14e-4 against a hard limit of 1e-2.",
+      "worth": null,
+      "note": "Genuinely shared rather than assumed to be: both sides are far under the same limit, by r2's own regime table." },
+
+    { "name": "trap_linearity", "status": "shared",
+      "mine": "x_eq <= 0.15a keeps the bead inside the linear region; the run stops a velocity if x_eq exceeds about 0.3a.",
+      "theirs": "Exactly harmonic by construction, at all amplitudes.",
+      "worth": null,
+      "note": "Shared only in the sense that both stay inside the harmonic regime. r2 points out that the simulation cannot detect a real trap's anharmonicity, so it cannot validate the 0.15a choice -- that stays ours to check on the instrument." },
+
+    { "name": "drift", "status": "differs",
+      "mine": "z drift held under about 0.3 um within a rung by a witness against a stuck bead (P10). A monotonic drift and the Faxen curve have the same shape, so this moves the measurand rather than adding noise.",
+      "theirs": "Absent by construction.",
+      "worth": null,
+      "note": "Not quantifiable on either side, and nothing in this round touches it. Declared so that an agreement on sigma_f_c_single is not read as covering it." }
+  ],
+
+  "out_of_scope": [
+    "h0, the Faxen separation, and the six-rung ladder fit. r2 refused all three for want of a trapped-sphere-at-a-wall runner, and RUNNERS has one card today. Asking again before that card exists would be asking the trap runner to compute a system it does not contain.",
+    "alpha(a) across sizes. Precondition P0 still blocks it: two registered sizes spanning 1.24x against an about 8 % systematic.",
+    "The perpendicular Faxen coefficient. The drive is in x, so nothing here licenses an axial claim.",
+    "Trap heating. Lens 7's silence on it is not heating cleared.",
+    "Any change to this repository's sampling gate. G14's REQUIRED_SAMPLING_RATIO = 10.0 is not edited on the strength of a simulated number; which convention governs the run is a human decision, recorded in the plan's D-1."
+  ],
+
+  "derived_from": [
+    { "ref": "bd:runs/trap-2d-5um__a5ef4f45d589", "hash": "sha256:09913b52a633d7f9",
+      "note": "The archived production run r2 answered from. Its 1.17 % on f_c is the ensemble figure this round asks to have replaced by a per-realisation one." },
+    { "ref": "am:kb/external/bd/trap-stiffness-recovery.r2.md", "hash": "sha256:e0538d6abe19ccf6",
+      "note": "Where r2 landed in this repository: kb/external/bd/, evidence_class simulated, may_be_gate_threshold false. Its frontmatter carries two keys the bridge schema does not have (question, date) because knowledge/index.py requires them of every indexed entry; the body is a mechanical copy. Adding both keys to kb_external_entry.schema.json is proposed, not done." }
+  ],
+  "confirmed_by": null
+}
