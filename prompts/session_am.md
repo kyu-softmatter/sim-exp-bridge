@@ -90,6 +90,23 @@
 갈리거나 겹치고, 왕복 루프의 가장 흔한 실패는 각 단계가 틀리는 게 아니라 3번 돌고
 나니 원래 질문이 아닌 것이다.
 
+## 저장소 사용법 (git)
+
+공유 저장소는 **private git 리포**이고 두 세션이 같은 리모트를 쓴다.
+
+    https://github.com/kyu-softmatter/sim-exp-bridge
+    로컬: ~/Desktop/sim-exp-bridge   (브랜치 main, 이미 clone 되어 있음)
+
+- **쓰기 전에 항상 `git pull --rebase`.** 상대 세션이 라운드를 올려뒀을 수 있다.
+- **커밋은 위 소유권 표에서 자기 것인 파일만.** 한 라운드 = 한 커밋으로 묶고,
+  메시지에 스레드와 라운드를 적는다 (`r2: BD answers f_c to 1.17 %, refuses h0`).
+- **`git push --force`는 쓰지 않는다.** 이력이 라운드 기록이다.
+- **자기 소유가 아닌 파일에서 충돌이 나면 멈추고 보고할 것.** 그건 병합 문제가
+  아니라 소유권 규약이 깨졌다는 신호다.
+- 이 리포는 브랜치를 나누지 않는다. 라운드가 곧 순서이고, `main` 위의 선형 이력이
+  왕복 기록 그 자체다. 자기 리포(`version2` / `microscope-link-survey`)의 브랜치
+  작업과는 별개다.
+
 ## 구현 항목
 
 1. **`plan_experiment_<title>.json` 사이드카 내보내기.** `knowledge/plans.py`에
