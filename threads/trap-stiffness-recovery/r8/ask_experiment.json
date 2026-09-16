@@ -348,10 +348,10 @@
       "note": "the ask this answers"
     },
     {
-      "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json@r8",
+      "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json",
       "hash": "sha256:2cd537ed75d923df",
       "rev": "4652273",
-      "note": "the document corrects[0] reclassifies, at the revision r8 was written against -- 4652273 added gaps[].kind to it, which is the field corrects[0] is about. Suffixed key so r4's own citation of the earlier revision keeps verifying."
+      "note": "the document corrects[0] reclassifies, at the revision r8 was written against: 4652273 added gaps[].kind to it, which is the field corrects[0] is about. The ref is the real path and the hash names the revision -- R6 resolves it against the @r8 key (1f7d2d6). It was written with the suffix IN the ref before that landed, which made the path not a path."
     },
     {
       "ref": "bd:verify/_out/params_trap_drag_ladder.txt",
