@@ -793,10 +793,19 @@ def _r6_branch_checks() -> list[str]:
 
 
 def selftest() -> int:
-    """A rule nobody can see fail is a rule that has quietly stopped existing."""
+    """A rule nobody can see fail is a rule that has quietly stopped existing.
+
+    And a fixture that only asserts *a* failure can pass for the wrong reason.
+    `expected.json` pins each fixture's failure identity: the rule alone is not
+    enough once a rule has branches, and R6 has four.
+    """
     global STRICT
     STRICT = True
     print(f"interpreter: {sys.executable}")
+
+    exp_file = ROOT / "fixtures/invalid/expected.json"
+    expected = {k: v for k, v in json.loads(exp_file.read_text()).items()
+                if not k.startswith("_")} if exp_file.exists() else {}
 
     bad = 0
     branch_failures = _r6_branch_checks()
@@ -837,8 +846,11 @@ def selftest() -> int:
     for t in sorted(p for p in (ROOT / "fixtures/invalid").glob("r11-*") if p.is_dir()):
         rep = r11_thread(t, manifest)
         hit = [e for e in rep.errors if e.startswith("R11")]
-        if hit and len(hit) == len(rep.errors):
-            print(f"ok    fixtures/invalid/{t.name}/ -> R11 fired, and only R11")
+        frag = expected.get(t.name)
+        identity = frag is None or any(frag in e for e in hit)
+        if hit and len(hit) == len(rep.errors) and identity:
+            print(f"ok    fixtures/invalid/{t.name}/ -> R11 fired, and only R11 "
+                  f"({frag!r})" if frag else "")
         else:
             bad += 1
             print(f"BAD   fixtures/invalid/{t.name}/: "
@@ -848,7 +860,9 @@ def selftest() -> int:
 
     md_fixtures = [p for p in sorted(ROOT.glob("fixtures/invalid/**/*.md"))
                    if p.name != "README.md"]
-    for p in sorted(ROOT.glob("fixtures/invalid/*.json")) + md_fixtures:
+    json_fixtures = [p for p in sorted(ROOT.glob("fixtures/invalid/*.json"))
+                     if p.name != "expected.json"]
+    for p in json_fixtures + md_fixtures:
         # 'r5-circular....json' -> 'R5'; nested md fixtures take the rule from
         # the top-level directory under fixtures/invalid/.
         rel = p.relative_to(ROOT / "fixtures/invalid")
@@ -856,12 +870,17 @@ def selftest() -> int:
         rep = (validate_kb_entry if p.suffix == ".md" else validate)(p, manifest)
         hit = [e for e in rep.errors if e.startswith(want)]
         others = [e for e in rep.errors if not e.startswith(want)]
-        if hit and not others:
-            print(f"ok    {p.relative_to(ROOT)} -> {want} fired, and only {want}")
+        frag = expected.get(rel.parts[0], expected.get(str(rel)))
+        identity = frag is None or any(frag in e for e in hit)
+        if hit and not others and identity:
+            tail = f" ({frag!r})" if frag else "  [no identity pinned]"
+            print(f"ok    {p.relative_to(ROOT)} -> {want} fired, and only {want}{tail}")
         else:
             bad += 1
             reason = (f"{want} did not fire" if not hit
-                      else f"{want} fired but so did {len(others)} other rule(s)")
+                      else f"{want} fired but so did {len(others)} other rule(s)"
+                      if others
+                      else f"{want} fired for the WRONG reason -- expected {frag!r}")
             print(f"BAD   {p.relative_to(ROOT)}: {reason}")
             for e in rep.errors:
                 print(f"          {e}")
