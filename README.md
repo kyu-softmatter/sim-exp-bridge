@@ -722,28 +722,42 @@ So there are **three axes**, and only the first two were deliberate:
 | prefix partition `am:` / `bd:` | **ownership** — neither side computes the other's field |
 | sorted keys | **the file** — two appends do not land on the same line |
 
-### Noted, not promoted — the filter removed the falsifier
+### Pattern 3 — a tool that cannot match its target
 
-Two instances, so recorded and not promoted. In both, a tool was asked a
-narrower question than the one being answered, and **the narrowing removed the
-evidence that would have shown the answer was stale.**
+Promoted at three instances, on the standard used for everything else here.
+In each, a tool was asked a narrower question than the one being answered, and
+**the narrowing removed the evidence that would have shown the answer was
+wrong.** A tool that cannot match its target produces output indistinguishable
+from success.
 
-- The AM session saw `--resolve` crash, fixed its own dead rev, and re-ran with
-  `grep -E "rev_absent|rev_mismatch|resolve: "` — **which cannot match a
-  traceback.** The run that would have shown the crash was already fixed
-  upstream was the run whose evidence it had filtered out. Its own summary: it
-  checked the finding it cared about and not the state of the tool.
-- Scanning this repository for Korean with a `perl -ne '/\p{Hangul}/'` loop
-  returned zero lines for every file, which read as "already English". A second
-  pass with `grep -rlP '[\x{AC00}-\x{D7A3}]'` found three files with hundreds
-  of lines. The first tool could not match the thing it was asked about, and a
-  tool that cannot match returns the same output as a clean result.
+| the tool | what it could not match | what it looked like |
+|---|---|---|
+| a `perl -ne '/\p{Hangul}/'` scan of this repository | Hangul | zero lines in every file — "already English", with three files and hundreds of lines present |
+| `grep -E "rev_absent\|rev_mismatch\|resolve: "` on a `--resolve` re-run | a traceback | the finding it was looking for, while the crash it was checking had been fixed upstream |
+| AM's `_check_citations`, reading inline `[text](target)` only | reference-style links | **`plan-check` reporting clean on an unchecked citation** |
 
-AM's framing is the one to keep: *a check that passes on the part you are
-looking at while the part you are not looking at has moved.* It is adjacent to
-Pattern 2 and not the same — there the check was unwired, here the check was
-fine and the **viewing** was narrowed. Both produce a pass that means nothing,
-which is why they are easy to confuse.
+**The third is a different severity and that is the part to keep.** The first
+two were one-off looks, and a stale look costs one message. The third was a
+**committed check**, so it would have gone on reporting clean indefinitely, and
+the plan it passed would have carried a dead citation with a green tick on it.
+Same shape; a nuisance in a scan and a permanent lie in a checker. It was also
+sitting *inside the citation rule* — the exact failure that rule exists to
+catch.
+
+**How it differs from Pattern 2**, in AM's sharper form: there the check was
+never wired to anything, so it could not have fired. Here it was wired, it
+fired correctly, and its **field of view** excluded the case.
+
+> Pattern 2 is answerable by asking *"does this run?"*
+> Pattern 3 is answerable only by asking *"what can this see?"* —
+> and that is a question nobody asks of a passing check.
+
+**The defence AM used is the transferable part: refuse the form rather than
+grow the parser.** A plan has one linking style; supporting two is two things
+to keep checked, and refusing the second keeps the check's **coverage equal to
+its claim**. It costs nothing while no plan uses it, and the test is named for
+the failure rather than for the shape. Growing the parser would have widened
+the field of view once; refusing widens it permanently.
 
 ### Noted, not promoted — conclusion right, reason wrong
 
