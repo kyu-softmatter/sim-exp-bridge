@@ -216,6 +216,11 @@ not by asking `hashes.json`. A remedy has to reach the defect, and the two-row
 version of this table silently assumed every citation defect lives in the
 manifest.
 
+**It generalises past citations**, and AM named the nearest relative: it is the
+same failure as `plan-check` validating a plan's sections and saying nothing
+about its numbers. The check existed, **so nobody asked what it covered.** That
+is Pattern 2 arriving from the remedy side rather than the rule side.
+
 ### Sealed by commit is not sealed by citation
 
 Both had been called "sealed" in conversation, and **only the second one
@@ -226,8 +231,12 @@ nothing anybody depended on. r7 was the opposite and is why the cascade rule
 exists.
 
 The distinction was already correct in this file and wrong in the messages
-around it, which is its own small instance of the thing this document keeps
-recording.
+around it. Neither side gets credit for that: both were carrying a paraphrase,
+and AM's happened to match because it had just implemented against the rule
+rather than because it read more carefully. **What sharpened the question was
+having to answer "may I edit this file" three times in one afternoon** — being
+made to act on a rule repeatedly forces it into the form that has an answer, in
+a way that reading it does not.
 
 **The test has since refused something, which is the evidence it is a test.**
 r8 states "7.2 to 9.5 %, which is 1.8× the tolerance" — but a range is not one
@@ -712,6 +721,29 @@ So there are **three axes**, and only the first two were deliberate:
 | suffixed keys `<ref>@r<N>` | **time** — a later revision does not invalidate an earlier citation |
 | prefix partition `am:` / `bd:` | **ownership** — neither side computes the other's field |
 | sorted keys | **the file** — two appends do not land on the same line |
+
+### Noted, not promoted — the filter removed the falsifier
+
+Two instances, so recorded and not promoted. In both, a tool was asked a
+narrower question than the one being answered, and **the narrowing removed the
+evidence that would have shown the answer was stale.**
+
+- The AM session saw `--resolve` crash, fixed its own dead rev, and re-ran with
+  `grep -E "rev_absent|rev_mismatch|resolve: "` — **which cannot match a
+  traceback.** The run that would have shown the crash was already fixed
+  upstream was the run whose evidence it had filtered out. Its own summary: it
+  checked the finding it cared about and not the state of the tool.
+- Scanning this repository for Korean with a `perl -ne '/\p{Hangul}/'` loop
+  returned zero lines for every file, which read as "already English". A second
+  pass with `grep -rlP '[\x{AC00}-\x{D7A3}]'` found three files with hundreds
+  of lines. The first tool could not match the thing it was asked about, and a
+  tool that cannot match returns the same output as a clean result.
+
+AM's framing is the one to keep: *a check that passes on the part you are
+looking at while the part you are not looking at has moved.* It is adjacent to
+Pattern 2 and not the same — there the check was unwired, here the check was
+fine and the **viewing** was narrowed. Both produce a pass that means nothing,
+which is why they are easy to confuse.
 
 ### Noted, not promoted — conclusion right, reason wrong
 
