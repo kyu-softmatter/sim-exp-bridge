@@ -473,7 +473,14 @@ def r6_hashes(doc: dict, rep: Report, manifest: dict | None,
                                "revision, which is expected and fine.")
             continue
         if not candidates:
-            rep.warn("R6", f"{ref} is not in hashes.json -- cannot check drift")
+            rep.err("R6", f"{ref} is in no manifest entry.",
+                    "An unregistered ref is an unverifiable provenance claim, which is "
+                    "what the PLACEHOLDER branch already refuses -- and less honest, "
+                    "since nobody even declared it unknown. It was a warning until the "
+                    "AM session found three plan citations pointing at entries that "
+                    "exist only on another branch -- the sources of its ROI, its "
+                    "exposure and its 520 fps -- while every check passed, because "
+                    "nothing read a link. Register the ref, or do not cite it.")
         elif PLACEHOLDER in known.lower() or PLACEHOLDER in h.lower():
             rep.err("R6", f"{ref} is declared UNKNOWN on purpose -- the manifest "
                           f"carries {known}. This is a named refusal, not drift: "
@@ -767,7 +774,7 @@ def _r6_branch_checks() -> list[str]:
          {REF: "sha256:PLACEHOLDER"}, "sha256:aaaa1111",
          "declared UNKNOWN on purpose", None),
         ("unregistered ref",
-         {}, "sha256:aaaa1111", None, "not in hashes.json"),
+         {}, "sha256:aaaa1111", "is in no manifest entry", None),
     ]
     failures = []
     for name, manifest, cited, want_err, want_warn in cases:
