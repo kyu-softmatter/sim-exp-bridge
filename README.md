@@ -722,43 +722,6 @@ So there are **three axes**, and only the first two were deliberate:
 | prefix partition `am:` / `bd:` | **ownership** — neither side computes the other's field |
 | sorted keys | **the file** — two appends do not land on the same line |
 
-### Pattern 3 — a tool that cannot match its target
-
-Promoted at three instances, on the standard used for everything else here.
-In each, a tool was asked a narrower question than the one being answered, and
-**the narrowing removed the evidence that would have shown the answer was
-wrong.** A tool that cannot match its target produces output indistinguishable
-from success.
-
-| the tool | what it could not match | what it looked like |
-|---|---|---|
-| a `perl -ne '/\p{Hangul}/'` scan of this repository | Hangul | zero lines in every file — "already English", with three files and hundreds of lines present |
-| `grep -E "rev_absent\|rev_mismatch\|resolve: "` on a `--resolve` re-run | a traceback | the finding it was looking for, while the crash it was checking had been fixed upstream |
-| AM's `_check_citations`, reading inline `[text](target)` only | reference-style links | **`plan-check` reporting clean on an unchecked citation** |
-
-**The third is a different severity and that is the part to keep.** The first
-two were one-off looks, and a stale look costs one message. The third was a
-**committed check**, so it would have gone on reporting clean indefinitely, and
-the plan it passed would have carried a dead citation with a green tick on it.
-Same shape; a nuisance in a scan and a permanent lie in a checker. It was also
-sitting *inside the citation rule* — the exact failure that rule exists to
-catch.
-
-**How it differs from Pattern 2**, in AM's sharper form: there the check was
-never wired to anything, so it could not have fired. Here it was wired, it
-fired correctly, and its **field of view** excluded the case.
-
-> Pattern 2 is answerable by asking *"does this run?"*
-> Pattern 3 is answerable only by asking *"what can this see?"* —
-> and that is a question nobody asks of a passing check.
-
-**The defence AM used is the transferable part: refuse the form rather than
-grow the parser.** A plan has one linking style; supporting two is two things
-to keep checked, and refusing the second keeps the check's **coverage equal to
-its claim**. It costs nothing while no plan uses it, and the test is named for
-the failure rather than for the shape. Growing the parser would have widened
-the field of view once; refusing widens it permanently.
-
 ### Noted, not promoted — conclusion right, reason wrong
 
 Two instances, which by this document's own standard is worth writing down and
@@ -803,6 +766,43 @@ numbers and collapses the moment anyone measures. Pattern 2 targets the checks
 and is **invisible because it passes** — there is no moment at which it announces
 itself. So the defences differ: the first needs someone to run the measurement,
 the second needs **someone to make the rule fail on purpose.**
+
+### Pattern 3 — a tool that cannot match its target
+
+Promoted at three instances, on the standard used for everything else here.
+In each, a tool was asked a narrower question than the one being answered, and
+**the narrowing removed the evidence that would have shown the answer was
+wrong.** A tool that cannot match its target produces output indistinguishable
+from success.
+
+| the tool | what it could not match | what it looked like |
+|---|---|---|
+| a `perl -ne '/\p{Hangul}/'` scan of this repository | Hangul | zero lines in every file — "already English", with three files and hundreds of lines present |
+| `grep -E "rev_absent\|rev_mismatch\|resolve: "` on a `--resolve` re-run | a traceback | the finding it was looking for, while the crash it was checking had been fixed upstream |
+| AM's `_check_citations`, reading inline `[text](target)` only | reference-style links | **`plan-check` reporting clean on an unchecked citation** |
+
+**The third is a different severity and that is the part to keep.** The first
+two were one-off looks, and a stale look costs one message. The third was a
+**committed check**, so it would have gone on reporting clean indefinitely, and
+the plan it passed would have carried a dead citation with a green tick on it.
+Same shape; a nuisance in a scan and a permanent lie in a checker. It was also
+sitting *inside the citation rule* — the exact failure that rule exists to
+catch.
+
+**How it differs from Pattern 2**, in AM's sharper form: there the check was
+never wired to anything, so it could not have fired. Here it was wired, it
+fired correctly, and its **field of view** excluded the case.
+
+> Pattern 2 is answerable by asking *"does this run?"*
+> Pattern 3 is answerable only by asking *"what can this see?"* —
+> and that is a question nobody asks of a passing check.
+
+**The defence AM used is the transferable part: refuse the form rather than
+grow the parser.** A plan has one linking style; supporting two is two things
+to keep checked, and refusing the second keeps the check's **coverage equal to
+its claim**. It costs nothing while no plan uses it, and the test is named for
+the failure rather than for the shape. Growing the parser would have widened
+the field of view once; refusing widens it permanently.
 
 ### Checkability beats care
 
