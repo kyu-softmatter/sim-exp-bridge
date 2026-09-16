@@ -370,6 +370,26 @@ r5 and r7 point.
   records the same thing in `_subject_of`, and `no_recipe` still stands for a
   directory nobody declared. Nothing was re-registered.
 
+### Two more, from wiring it — and neither was findable before
+
+**`rev: HEAD` is not a pin.** r5 cited r4 at `HEAD`, and it agreed with its
+hash for as long as r4 did not move. Correcting r4 turned the same unchanged
+line into a contradiction — a citation whose answer depends on which checkout
+reads it, which is the one thing a `rev` exists to prevent. It is corrected to
+`b96092b`, the commit `HEAD` meant when it was written, and `--resolve` now
+**refuses** the `HEAD` family rather than answering it: an answer that differs
+per checkout is worse than a refusal. A branch name stays acceptable — the
+schema allows it and it is at least the same thing for everyone on that branch.
+
+**CI's checkout is one commit deep.** The step passed locally and failed on its
+first CI run: `actions/checkout@v4` defaults to `fetch-depth: 1`, so four
+citations reported `rev_missing` against a history that was simply not in the
+clone. This file had already warned that "selftest clean locally" and "CI green"
+are two platforms that have never intersected; the warning was collected by
+return of post, by the step added to the same file. Fixed with `fetch-depth: 0`,
+and reproduced both ways locally first — `git clone --depth 1` gives 5
+unresolvable, a full clone gives 0 — rather than by pushing again to see.
+
 **The first run also produced three defects that were the resolver's own**, and
 that is the part worth keeping: `path@r3` opened as a filename (R13's form, in
 a ref the validator already warns about), `git show` on a directory hashing the

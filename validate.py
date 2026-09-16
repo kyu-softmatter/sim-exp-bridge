@@ -784,12 +784,14 @@ RESOLVE_STATUSES = {
     "rev_mismatch": "the blob at the cited rev is not the cited hash",
     "no_root":      "no checkout configured for that side -- not checked",
     "no_rev":       "a path-only citation, so there is no revision to resolve",
+    "rev_moving":   "the `rev` names whatever is checked out, so it is not a pin",
     "unread":       "a document that could not be parsed -- its refs are UNCHECKED",
 }
 #: `advanced` is deliberately not an error: the `@r<N>` convention exists so
 #: that upstream moving past a frozen citation is the normal case. What it buys
 #: is that the move becomes visible at all, and it names the next key to write.
-RESOLVE_ERRORS = {"absent", "rev_missing", "rev_absent", "rev_mismatch", "unread"}
+RESOLVE_ERRORS = {"absent", "rev_missing", "rev_absent", "rev_mismatch", "unread",
+                  "rev_moving"}
 RESOLVE_WARNINGS = {"advanced", "no_recipe"}
 
 
@@ -822,6 +824,14 @@ def _git_blob(root: Path, rev: str, path: str) -> tuple[str, bytes | None]:
     def git(*args: str) -> subprocess.CompletedProcess:
         return subprocess.run(["git", "-C", str(root), *args], capture_output=True)
 
+    # `HEAD` resolves everywhere and means something different in each place.
+    # r5 cited r4 at `HEAD`, which agreed with its hash for as long as r4 did
+    # not move; correcting r4 turned the same line into a contradiction, in
+    # the same run that wired this into CI. A branch name is a weak pin and
+    # the schema allows it -- this is not a pin at all, so it is refused
+    # rather than answered.
+    if re.fullmatch(r"(HEAD|@)([~^].*)?", rev.strip()):
+        return "rev_moving", None
     if git("cat-file", "-e", f"{rev}^{{commit}}").returncode != 0:
         return "rev_missing", None
     kind = git("cat-file", "-t", f"{rev}:{path}")
@@ -1319,6 +1329,7 @@ def _resolve_checks() -> list[str]:
         {"ref": "am:kb", "hash": h1, "rev": rev1},                 # a tree
         {"ref": "am:kb", "hash": h1, "rev": rev1,                  # …named
          "field": "thing.md"},
+        {"ref": "am:kb/thing.md", "hash": h1, "rev": "HEAD"},      # not a pin
     ]
     docfile = tmp / "doc.json"
     docfile.write_text(json.dumps(doc))
@@ -1335,6 +1346,7 @@ def _resolve_checks() -> list[str]:
         ("am:kb/proxy.md", h1, rev1, ""): "ok_rev",
         ("am:kb", h1, rev1, ""): "no_recipe",
         ("am:kb", h1, rev1, "thing.md"): "ok_rev",
+        ("am:kb/thing.md", h1, "HEAD", ""): "rev_moving",
     }
 
     failures, seen = [], set()

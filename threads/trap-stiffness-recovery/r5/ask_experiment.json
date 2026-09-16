@@ -390,8 +390,8 @@
     {
       "ref": "bd:bridge/threads/trap-stiffness-recovery/r4/ask_experiment.json",
       "hash": "sha256:1099538c29c594bc",
-      "rev": "HEAD",
-      "note": "the correction this rests on. Read r4 first: r3 was drafted against a number r4 withdraws."
+      "rev": "b96092b",
+      "note": "the correction this rests on. Read r4 first: r3 was drafted against a number r4 withdraws. \u26a0 rev corrected 2026-09-16: this line read `HEAD`, which is not a pin -- it names whatever is checked out, so it resolved to the cited hash in the tree it was written in and to something else everywhere else. It went unnoticed for as long as r4 did not move; the moment r4 was corrected, `HEAD` started resolving to the corrected r4 and the citation contradicted itself. b96092b is what HEAD meant when this was written: the commit that carries r5 and left r4 at 1099538c, which is the hash here and is unchanged. --resolve refuses the HEAD family outright now rather than resolving it, because an answer that differs per checkout is worse than a refusal."
     },
     {
       "ref": "bd:verify/detector_model.py",
