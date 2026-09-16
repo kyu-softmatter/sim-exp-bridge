@@ -501,9 +501,17 @@ cheap throughout.
 |---|---|---|---|
 | 1 | r2's `f_c` precision +1.17 % — "physics" | the estimator. Exact OU through the same estimator gives +0.8–1.2 % | 2 rounds |
 | 2 | r1's blur term `2 D t_exp/3` | the exact OU boxcar factor is `u/3`. A factor of 2; `2u/3` rejected at 16–358σ | 3 rounds |
-| 3 | r1's 3 % per rung — a numpy toy model | 29.1 % for a single bead. And the primary route's slope precision **is still unmeasured** | 7 rounds, ongoing |
+| 3a | r1's `sigma_gamma_per_rung <= 3 %` — a numpy toy model, and the **primary** route | 7.2–9.5 % simulated, i.e. **2.4–3.2×**, against a tolerance of 4.48 %. Still unmeasured on the instrument: that is P7 | 7 rounds, ongoing |
+| 3b | r3's `sigma_f_c_single <= 3 %` — the **cross-check** route | 29.1 %, i.e. **9.7×** | 2 rounds |
 | 4 | validator warning volume — "not yet worth acting on" | already 11 repetitions, 11,787 characters of output | immediately |
 | 5 | r8's `rev: 07d1048` — a file assumed committed | the file does not exist at that revision. Hash correct, `rev` pointing at nothing | several commits, while pushed |
+
+**3a and 3b were one row until BD caught it**, and the mechanism of that mistake
+is worth more than the correction: two different quantities are each compared
+against a 3 %, so the ratios (2.4–3.2× and 9.7×) attach to the wrong one
+without anybody being careless. Splitting the row removes the confusion
+structurally instead of by careful wording, which is the same move as everything
+in [the general form](#the-general-form).
 
 Instances 4 and 5 were raised by the BD session against itself — **the party
 that had found 1 through 3.** That is the point: the failure is not carelessness,
@@ -567,6 +575,21 @@ So there are **three axes**, and only the first two were deliberate:
 | prefix partition `am:` / `bd:` | **ownership** — neither side computes the other's field |
 | sorted keys | **the file** — two appends do not land on the same line |
 
+### Noted, not promoted — conclusion right, reason wrong
+
+Two instances, which by this document's own standard is worth writing down and
+not worth reframing anything around: r2's +1.17 % (the value is what that
+estimator gives; the interpretation was wrong) and the claim that
+`hashes.json` had never conflicted *because* of the prefix partition (it had
+never conflicted, and the reason was that the writers were never concurrent).
+
+What makes it possibly distinct from Pattern 1 is **detectability**, not the
+error. A wrong number collapses the moment anyone measures it. A wrong reason
+**survives measurement intact**, because the measurement confirms the conclusion
+and never touches the reasoning — which is why both of those sat for as long as
+they did while being checked repeatedly. If a third arrives it gets its own row
+under that name.
+
 ### Pattern 2 — a check that exists and is not wired to what it describes
 
 A different failure, and by the end it had more instances than the first.
@@ -596,6 +619,21 @@ numbers and collapses the moment anyone measures. Pattern 2 targets the checks
 and is **invisible because it passes** — there is no moment at which it announces
 itself. So the defences differ: the first needs someone to run the measurement,
 the second needs **someone to make the rule fail on purpose.**
+
+### Checkability beats care
+
+The single statement above all the rules that follow from it. The failure mode in
+both patterns is neither dishonesty nor carelessness: **a writer cannot see their
+own blind spot**, so care scales badly and checkability scales. Every mechanism
+these three repositories accumulated is an instance, and none of them makes
+anybody more careful:
+
+- `rev` on a ref — the reader can resolve the citation instead of trusting it
+- a message fragment instead of an exception type (`expected.json`)
+- `ast.unparse` of a node instead of the raising line's source text
+- "the dict compares equal, no hash appears an odd number of times" instead of
+  "no values changed" — one is checkable in a command, the other asks for trust
+- `--selftest` refusing to pass on nothing, instead of a reviewer noticing
 
 ### The general form
 
