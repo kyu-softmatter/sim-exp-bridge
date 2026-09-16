@@ -93,17 +93,36 @@ SEVERITY = {"measured": 0, "handbook": 0, "computed": 1,
             "simulated": 2, "round_trip": 2, "assumed": 3}
 
 
+#: Rationales already printed in this run, keyed by (rule, rationale). The
+#: reasoning in these messages is what makes them work -- R13's closing clause
+#: is the reason it did not recruit a reader into editing a sealed file. But the
+#: same multi-sentence rationale was being repeated up to eleven times in one
+#: run, and at that volume people read the rule ID and skip the text, which
+#: defeats the clause. So the rationale is printed once and referred to after.
+#: Nothing is trimmed; it stops being duplicated.
+_RATIONALES_SEEN: set[tuple[str, str]] = set()
+
+
 class Report:
     def __init__(self, path: Path):
         self.path = path
         self.errors: list[str] = []
         self.warnings: list[str] = []
 
-    def err(self, rule: str, msg: str) -> None:
-        self.errors.append(f"{rule}  {msg}")
+    def _fmt(self, rule: str, head: str, why: str) -> str:
+        if not why:
+            return f"{rule}  {head}"
+        key = (rule, why)
+        if key in _RATIONALES_SEEN:
+            return f"{rule}  {head}  [{rule} rationale printed above]"
+        _RATIONALES_SEEN.add(key)
+        return f"{rule}  {head} {why}"
 
-    def warn(self, rule: str, msg: str) -> None:
-        self.warnings.append(f"{rule}  {msg}")
+    def err(self, rule: str, msg: str, why: str = "") -> None:
+        self.errors.append(self._fmt(rule, msg, why))
+
+    def warn(self, rule: str, msg: str, why: str = "") -> None:
+        self.warnings.append(self._fmt(rule, msg, why))
 
     @property
     def ok(self) -> bool:
@@ -206,9 +225,9 @@ def r4_draft(doc: dict, rep: Report) -> None:
                           "unresolved assumption is the one class of difference no "
                           "number reveals.")
         elif resolved is not False and status == "draft":
-            rep.warn("R4", "unknowns are declared only through `status: draft`. "
-                           "Prefer `assumptions_resolved: false`, which survives a "
-                           "later status change.")
+            rep.warn("R4", "unknowns are declared only through `status: draft`.",
+                     "Prefer `assumptions_resolved: false`, which survives a later "
+                     "status change.")
     else:
         if resolved is False:
             rep.err("R4", "`assumptions_resolved: false` but every assumption is "
@@ -248,8 +267,8 @@ def r5_circular(doc: dict, rep: Report) -> None:
                           "declare it in gaps[].")
         else:
             rep.warn("R5", f"requirements[{i}] ({sym}) echoes {consumer}'s own "
-                           f"number ({own[0]}) -- round-trip, soft, so allowed. "
-                           "Confirm it is declared in gaps[].")
+                           f"number ({own[0]}).",
+                     "Round-trip, soft, so allowed. Confirm it is declared in gaps[].")
 
 
 def r5b_round_trip_labels(doc: dict, rep: Report) -> None:
@@ -319,11 +338,11 @@ def r8_tier_not_derivable(doc: dict, rep: Report) -> None:
                 elif tier not in allowed:
                     rep.warn("R8", f"{where} ({node.get('symbol')}) ships tier "
                                    f"{tier} but evidence: {ev!r} reaches only "
-                                   f"{sorted(allowed)} via T1. Ignored -- `evidence` "
-                                   "is authoritative. Leave sealed documents alone; "
-                                   "omit `tier` in new ones. This warning standing is "
-                                   "the record that the field was normative when this "
-                                   "document was written.")
+                                   f"{sorted(allowed)} via T1.",
+                             "Ignored -- `evidence` is authoritative. Leave sealed "
+                             "documents alone; omit `tier` in new ones. This warning "
+                             "standing is the record that the field was normative when "
+                             "the document was written.")
             for k, v in node.items():
                 walk(v, f"{where}.{k}")
         elif isinstance(node, list):
@@ -345,12 +364,12 @@ def r12_gap_kind(doc: dict, rep: Report) -> None:
     """
     for i, g in enumerate(doc.get("gaps", []) or []):
         if "kind" not in g:
-            rep.warn("R12", f"gaps[{i}] ({str(g.get('what'))[:60]!r}) has no `kind`. "
-                            "not_yet_built, not_buildable_here, needs_human_action and "
-                            "needs_data_transfer are four different instructions to the "
-                            "reader; `would_need` alone does not separate them. Leave "
-                            "sealed documents alone -- backfilling `kind` into r2 is "
-                            "what caused the R6 cascade. Carry it in new gaps.")
+            rep.warn("R12", f"gaps[{i}] ({str(g.get('what'))[:60]!r}) has no `kind`.",
+                     "not_yet_built, not_buildable_here, needs_human_action and "
+                     "needs_data_transfer are four different instructions to the "
+                     "reader; `would_need` alone does not separate them. Leave sealed "
+                     "documents alone -- backfilling `kind` into r2 is what caused the "
+                     "R6 cascade. Carry it in new gaps.")
         elif g.get("kind") == "not_buildable_here" and g.get("owner") not in (None, "nobody", "human"):
             rep.warn("R12", f"gaps[{i}] is not_buildable_here but owner is "
                             f"{g.get('owner')!r}. If no work inside the framework helps, "
@@ -376,11 +395,11 @@ def r13_ref_is_a_path(doc: dict, rep: Report) -> None:
         if isinstance(node, dict):
             r = node.get("ref")
             if isinstance(r, str) and "@" in r:
-                rep.warn("R13", f"{where}.ref is {r!r} -- `@r<N>` is a manifest key "
-                                "form, not part of a path. R6 resolves revisions "
-                                "itself now, so the ref should be the path and the "
-                                "hash should name the revision. Leave sealed "
-                                "documents alone; do not write new ones this way.")
+                rep.warn("R13", f"{where}.ref is {r!r}.",
+                         "`@r<N>` is a manifest key form, not part of a path. R6 "
+                         "resolves revisions itself now, so the ref should be the path "
+                         "and the hash should name the revision. Leave sealed documents "
+                         "alone; do not write new ones this way.")
             for k, val in node.items():
                 walk(val, f"{where}.{k}")
         elif isinstance(node, list):
@@ -782,6 +801,7 @@ def selftest() -> int:
     else:
         print("ok    R6 branch checks  (5 cases: unsuffixed, suffixed, none, "
               "placeholder, unregistered)")
+    _RATIONALES_SEEN.clear()
     mf = ROOT / "hashes.json"
     manifest = json.loads(mf.read_text()) if mf.exists() else None
 
