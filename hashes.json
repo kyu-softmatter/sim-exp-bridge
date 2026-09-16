@@ -7,5 +7,11 @@
   "bd:runs/trap-2d-5um__a5ef4f45d589": "sha256:09913b52a633d7f9",
   "bd:intake/trap-2d-5um/system.yaml": "sha256:878915718bb9b548",
   "bd:intake/trap-2d-5um/goal.yaml": "sha256:b987e1ee911efd9a",
-  "am:bridge/threads/trap-stiffness-recovery/r1/ask_simulation.json": "sha256:58cfc405231a2970"
+  "am:bridge/threads/trap-stiffness-recovery/r1/ask_simulation.json": "sha256:58cfc405231a2970",
+  "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json": "sha256:d20427218c5cba73",
+  "bd:verify/verify_fc_estimator_bias.py": "sha256:e8f5942515006b5f",
+  "bd:verify/detector_model.py": "sha256:8fee871ff56bc2d5",
+  "bd:verify/verify_detector_model.py": "sha256:d022b00b2f50b166",
+  "bd:verify/_out/fc_estimator_bias.json": "sha256:b48c48c94ad2f0be",
+  "_bd_note": "bd: keys are added by the BD session. The verify/ entries are at rev a986c4d on branch microscope-link-survey, which is where r4's numbers come from -- not yet on BD's main. Every ref citing them carries `rev`, so R6 checks a named revision rather than whatever a path currently resolves to."
 }

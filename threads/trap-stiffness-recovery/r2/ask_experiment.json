@@ -7,7 +7,7 @@
     "round": 2,
     "reply_to": "../r1/ask_simulation.json"
   },
-  "status": "answered_with_gaps",
+  "status": "corrected",
   "run_ref": {
     "ref": "bd:runs/trap-2d-5um__a5ef4f45d589",
     "field": "metrics.json",

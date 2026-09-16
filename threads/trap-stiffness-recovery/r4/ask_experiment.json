@@ -1,0 +1,291 @@
+{
+  "schema": "softmatter.ask_experiment/0.1",
+  "direction": "simulation_to_experiment",
+  "origin": "bd",
+  "thread": {
+    "id": "trap-stiffness-recovery",
+    "round": 4,
+    "reply_to": "../r2/ask_experiment.json"
+  },
+  "status": "supersedes_prior",
+  "corrects": [
+    {
+      "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json",
+      "round": 2,
+      "what": "achieved_precision.value = 1.17 percent, and its basis 'metrics.json observables[] f_c (PSD fit) err_pct'.",
+      "why": "That +1.17 % is the Lorentzian fit's own bias, not the recoverability of f_c. Feeding EXACT Ornstein-Uhlenbeck data -- whose f_c is known in closed form as 1/(2 pi tau_k) -- through the archived run's own estimator configuration (Welch, nperseg 4096, unweighted curve_fit of S0/(1+(f/f_c)^2) over the whole one-sided PSD, 250 traces averaged before fitting) returns +0.8 to +1.2 %, at 10 samples per tau_k. The run reported +1.17 %, which is 0.1 sigma from the estimator's own bias. The simulation reproduced the estimator, and the estimator was read as physics.",
+      "was": "1.17 percent, presented as the precision to which f_c is recoverable.",
+      "now": "NOT KNOWN. This is the honest state and not a different number. The +1.17 % measured the estimator; the ensemble's statistical scatter at T_obs/tau_k = 2000 is 0.43 % sd, but that is an ensemble of 250 non-interacting replicas and corresponds to no experiment; a single bead is 9.0 % sd at the same T_obs/tau_k. All three still carry the estimator bias, which no acquisition change removes. Recoverability cannot be stated until the estimator is fixed -- a weighted fit, or fitting only near the corner.",
+      "downstream": [
+        "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json#requirements[0] -- T_obs_per_rung >= 32.3 s. Its ENTIRE justification was that 1.17 % 'is the configuration at which this case actually reached f_c to 1.17 %', i.e. T_obs/tau_k = 2000. A bias does not shrink with T_obs (measured: +0.57 % at 310, +0.98 % at 8000), so that justification is void. See requirements[0] below: the requirement SURVIVES, with a different and stronger basis.",
+        "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json#regime[3] -- T_obs/tau_k tolerance '>= 2000 to inherit the 1.17 %'. There is no 1.17 % to inherit.",
+        "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json#claim -- 'f_c is recoverable ... to +1.17 % against a 5 % tolerance'. False as stated.",
+        "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md#D-3 -- '310 against the 2000 at which BD measured f_c to +1.17 % -- 6.4x short'. The comparison is to a number that measured nothing. The decision it frames is still real; its arithmetic is not.",
+        "am:kb/external/bd/trap-stiffness-recovery.r2.md -- the imported copy carries the same figure and must be superseded, not edited.",
+        "am:bridge/threads/trap-stiffness-recovery/r3/ask_simulation.json#claim -- built on r2 while this was being found. Its 3 % hypothesis is addressed on its own terms in the next round, not here."
+      ]
+    },
+    {
+      "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md",
+      "round": 1,
+      "what": "The motion-blur coefficient '2*D*t_exp/3' applied to a TRAPPED bead's var(x) -- r1 assumptions[camera_model].mine, the plan's 'blur on var(x)' column, and the analysis recipe that corrects alpha by it.",
+      "why": "2*D*t_exp/3 is the FREE-PARTICLE MSD blur term. For a bead in a harmonic trap the exposure-averaged variance is exact: var_blur/var = 2(u-1+e^-u)/u^2 with u = t_exp/tau_k, so the deflation is u/3 as u -> 0, not 2u/3. Measured against exact-OU boxcar averaging at five values of u from 0.028 to 3: the exact formula holds everywhere within 3.3 sigma, 2u/3 is rejected at 16 to 358 sigma. This originated on the AM side and is corrected here because BD is where it was measured.",
+      "was": "2u/3 -- the plan's blur column, 1.21 % at h = 3.0 um rising to 1.94 % at h = 10 um.",
+      "now": "u/3 -- every entry in that column is exactly half: 0.60 % at h = 3.0 um rising to 0.97 % at h = 10 um.",
+      "downstream": [
+        "am:kb/plans/...#The height ladder, and what it returns -- all six rows of the 'blur on var(x)' column.",
+        "am:kb/plans/...#Analysis -- 'alpha corrected for epsilon (P8) and for the 2*D*t_exp/3 blur term'. Correcting by 2u/3 OVER-corrects alpha by u/3. Note this is not a flat offset: u = t_exp/tau_k(h) varies monotonically along the ladder, so the induced error is monotonic in h, and gamma(h) is the measurand. The magnitude is small -- the over-correction runs 0.60 % at h = 3.0 to 0.97 % at h = 10, a 0.37 percentage-point swing against a Faxen signal of +86.6 % to +16.2 % -- so this is a correction to make, not a threat to h0. Stated with its size so it is not over-read.",
+        "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json#assumptions[camera_model].worth -- 8.0 %, computed as AM's 1.86 % blur against ~9 % epsilon. With the blur at 0.92 % the net is ~7.7 %, still epsilon-dominated. The conclusion does not move; the number does."
+      ]
+    }
+  ],
+  "run_ref": {
+    "ref": "bd:runs/trap-2d-5um__a5ef4f45d589",
+    "field": "metrics.json",
+    "hash": "sha256:09913b52a633d7f9",
+    "rev": "a986c4d",
+    "note": "unchanged. The run is fine; what was wrong is what its f_c error was read to mean."
+  },
+  "claim": "Two numbers this thread is built on are wrong, and both were settled on data whose answer is known in closed form rather than by argument. (1) The +1.17 % r2 reported as the recoverability of f_c is the Lorentzian estimator's own bias: the same configuration returns +0.8 to +1.2 % on exact OU. It is a bias, not a variance -- T_obs x 26 does not remove it -- and the sampling dependence is non-monotonic, +7.9 % at 2 samples per tau_k and +3.8 % at 50, because an unweighted least squares over the whole band is dominated by points far above the corner that carry no information about f_c. (2) The motion-blur coefficient for a trapped bead is u/3, not the free-particle 2u/3. r2's three requirements are restated below: one loses its basis and regains a better one, two are unaffected.",
+  "answering_quantity": {
+    "symbol": "bias_f_c_estimator",
+    "unit": "percent",
+    "why": "NOT a physical quantity. The systematic error the archived run's own f_c estimator makes on data whose f_c is known exactly. It is the answering quantity of this document because it is what determines whether r2's headline number measured the physics or the method, and that question gates every precision statement downstream of r2."
+  },
+  "achieved_precision": {
+    "value": 0.233,
+    "unit": "percent",
+    "basis": "Standard error over 6 independent batches of 250 exact-OU realisations at the run's configuration (10 samples per tau_k, T_obs/tau_k = 2000, nperseg 4096). This is the precision on the BIAS measurement reported here. It is deliberately NOT r2's achieved_precision restated: see corrects[0].now -- the recoverability of f_c is not known until the estimator is fixed, and no number is offered in its place.",
+    "set_by": "bd"
+  },
+  "requirements": [
+    {
+      "symbol": "T_obs_per_rung",
+      "min": 32.3,
+      "unit": "s",
+      "hard": false,
+      "basis_group": "T_obs/tau_k",
+      "from": "SAME NUMBER, DIFFERENT BASIS. r2 asked for 32.3 s because 2000 tau_k was where the 1.17 % 'was measured'; that basis is void. The requirement survives on a measurement r2 did not have: the per-realisation scatter of the fitted f_c for ONE bead, with exposure and localisation noise applied, is 29.1 +/- 0.9 % sd at your 5 s per rung (T_obs/tau_k = 310) and 9.2 +/- 0.3 % at 32.3 s (T_obs/tau_k = 2001). So 5 s -> 32.3 s buys one bead a factor 3.2 on scatter, from ~29 % to ~9 %. That is the trade your D-3 cost decision should be weighed against -- not against 1.17 %, which was never a single-bead number and never a physics number.",
+      "basis_refs": [
+        {
+          "ref": "bd:verify/verify_fc_estimator_bias.py",
+          "hash": "sha256:e8f5942515006b5f",
+          "rev": "a986c4d",
+          "note": "the script. Exact-OU generator, the run's own estimator configuration."
+        },
+        {
+          "ref": "bd:runs/trap-2d-5um__a5ef4f45d589",
+          "field": "metrics.json",
+          "hash": "sha256:09913b52a633d7f9",
+          "rev": "a986c4d",
+          "note": "unchanged. The run is fine; what was wrong is what its f_c error was read to mean."
+        }
+      ]
+    },
+    {
+      "symbol": "f_s",
+      "min": 620,
+      "unit": "Hz",
+      "hard": false,
+      "basis_group": "samples_per_tau_k",
+      "from": "UNCHANGED and not derived from the 1.17 %. It comes from this repository's tau_k/10 sampling convention. One thing is added: at your envelope the convention is not what binds. Turning the camera on and off at 5 s per rung moves the single-bead scatter from 28.5 % to 29.1 %, i.e. about 2 % relative, while T_obs moves it by a factor of 3.2. Whatever the 2*pi naming disagreement of r2 finding[0] is, it is not the constraint at this envelope.",
+      "basis_refs": [
+        {
+          "ref": "bd:verify/verify_fc_estimator_bias.py",
+          "hash": "sha256:e8f5942515006b5f",
+          "rev": "a986c4d",
+          "note": "the script. Exact-OU generator, the run's own estimator configuration."
+        }
+      ]
+    },
+    {
+      "symbol": "epsilon_localisation",
+      "max": 7.6,
+      "unit": "nm",
+      "hard": true,
+      "from": "UNCHANGED. Derived analytically from variance inflation (epsilon/l_k)^2 at l_k = 33.98 nm, with no dependence on the 1.17 % and none on the blur coefficient. Still hard: it is a bias and does not average away. The blur correction of corrects[1] touches the OTHER half of the camera budget and moves the net camera effect on alpha from ~8.0 % to ~7.7 %, which does not change this ceiling.",
+      "basis_refs": []
+    }
+  ],
+  "regime": [
+    {
+      "name": "samples_per_tau_k",
+      "value": 10.0,
+      "expr": "tau_k/dt_sample",
+      "meaning": "resolves the corner",
+      "counterpart": 8.39,
+      "tolerance": "no longer a transfer condition -- see why_this_tolerance",
+      "why_this_tolerance": "r2 stated this group as a tolerance because the 1.17 % was measured at 10 samples per tau_k. With that number gone the group is no longer a condition for inheriting anything. It is retained because it is where the estimator bias is measured to be smallest (+0.8 % at 10, against +7.9 % at 2 and +3.8 % at 50), which is a property of the fit, not of the physics."
+    },
+    {
+      "name": "T_obs/tau_k",
+      "value": 2000.0,
+      "expr": "",
+      "meaning": "observation window / statistics",
+      "counterpart": 309.8,
+      "tolerance": ">= 2000 for ~9 % single-bead scatter; 310 gives ~29 %",
+      "why_this_tolerance": "Restated from measurement rather than from the void 1.17 %. The scatter is statistical and does scale roughly as 1/sqrt(T_obs): 29.1 % at 310 against 9.2 % at 2001 is a factor 3.2 for a factor 6.5 in T_obs, and sqrt(6.5) = 2.5. The estimator bias underneath it does NOT scale and is not part of this."
+    },
+    {
+      "name": "u = t_exp/tau_k",
+      "value": 0.0,
+      "expr": "t_exp/tau_k",
+      "meaning": "exposure against the relaxation time",
+      "counterpart": 0.027881,
+      "tolerance": "u << 1; the blur deflation of var(x) is u/3, not 2u/3",
+      "why_this_tolerance": "New group, added because corrects[1] is about it. Zero on this side: a BD trajectory is sampled at an instant. Your 0.027881 gives an exact deflation of 0.92 %, against the 1.86 % on the wire."
+    }
+  ],
+  "parsed_back": {
+    "received": [],
+    "derived_here": []
+  },
+  "assumptions": [
+    {
+      "name": "camera_model",
+      "status": "differs",
+      "mine": "A post-processing layer now exists (verify/detector_model.py): boxcar average over t_exp, then additive Gaussian epsilon, applied to sampled positions. It refuses rather than returns when the exposure spans fewer than two samples. It does not change the equation of motion.",
+      "theirs": "0.45 ms exposure, epsilon ~10 nm assumed pending P8",
+      "worth": {
+        "value": 7.7,
+        "unit": "percent",
+        "note": "Net effect on the equipartition alpha, revised from r2's 8.0 % by corrects[1]: blur 0.92 % (was 1.86 %) against epsilon 8.66 %. Still epsilon-dominated, so the epsilon <= 7.6 nm requirement is unaffected."
+      },
+      "note": "r2 recorded this as a gap. It is now built and checked against closed-form answers, which is what made corrects[1] findable."
+    },
+    {
+      "name": "particle_count",
+      "status": "differs",
+      "mine": "The archived run is N = 1000 non-interacting replicas, but f_c is fitted to the PSD of the n_trace = min(250, N) subset, not to all 1000.",
+      "theirs": "one isolated bead per ROI",
+      "worth": {
+        "value": 0.0,
+        "unit": "percent",
+        "note": "Zero on the central value, everything on the error bar -- and r2's own statement of it was wrong. r2 finding[3] said one bead scatters ~32x more, i.e. sqrt(1000). Measured: 21.1x at T_obs/tau_k = 2000 and 15.5x at 310. Two reasons: f_c comes from 250 traces and not 1000, and averaging PSDs before a non-linear fit is not averaging fits, so the ratio is not sqrt(n) either."
+      },
+      "note": "The absolute number is what matters for your plan, not the ratio: 9.2 % sd per bead at 2000, 29.1 % at 310."
+    },
+    {
+      "name": "wall_drag",
+      "status": "differs",
+      "mine": "No wall. Still true, still the largest structural difference, and still not addressed by this document.",
+      "theirs": "Faxen parallel, first order",
+      "worth": null,
+      "note": "Unchanged from r2. A correction document does not close a gap."
+    },
+    {
+      "name": "dimensionality",
+      "status": "differs",
+      "mine": "dimensions: 2, per-component observables only",
+      "theirs": "3D chamber, x-only drive and measurement",
+      "worth": {
+        "value": 0.0,
+        "unit": "percent",
+        "note": "Unchanged from r2. f_c is per-component and carries no dim."
+      }
+    },
+    {
+      "name": "medium",
+      "status": "shared",
+      "mine": "Newtonian water, no hydrodynamic memory",
+      "theirs": "Newtonian water at 20 C",
+      "worth": null
+    },
+    {
+      "name": "inertia",
+      "status": "shared",
+      "mine": "Overdamped, tau_p/tau_k = 8.14e-4",
+      "theirs": "neglected",
+      "worth": null
+    }
+  ],
+  "gaps": [
+    {
+      "what": "What f_c's recoverability actually is.",
+      "why": "The estimator is biased, so the run measured the estimator. Fixing it -- a variance-weighted fit, or restricting the band to a few decades around the corner -- is a change to the analysis, not to the physics, and it has not been made.",
+      "consequence": "r2's achieved_precision is withdrawn and NOT replaced. No number in this thread currently states how well f_c can be recovered.",
+      "would_need": "Re-fit with a weighted estimator, re-verify against exact OU, and only then restate. The archived trajectory does not need re-running."
+    },
+    {
+      "what": "Which estimator AM uses.",
+      "why": "Measured here: the same trajectory fitted with an unweighted least squares over the whole band is biased by +0.8 % at 10 samples per tau_k and +7.9 % at 2. The choice of fit is worth more than most of the physics differences in this thread.",
+      "consequence": "Any agreement or disagreement on f_c between the two sides is currently uninterpretable at the ~1 % level.",
+      "would_need": "One line from AM naming the fit, and the same exact-OU check run against it."
+    },
+    {
+      "what": "r3's question, answered on its own terms.",
+      "why": "r3 asks for sigma_f_c_single at the envelope with the camera in the model. That is answerable and the measurement exists, but folding an answer into a correction would let the correction be read as a negotiation.",
+      "consequence": "r3 is not answered here. Its premise is affected by corrects[0] and it should be read after this.",
+      "would_need": "The next round."
+    },
+    {
+      "what": "The wall, and therefore h0.",
+      "why": "Unchanged since r2: no wall runner, one height.",
+      "consequence": "The headline question of r1 is still unanswered.",
+      "would_need": "A second RUNNERS card. Running the trap runner on it would silently compute the wrong system."
+    }
+  ],
+  "findings": [
+    {
+      "what": "The +1.17 % was the estimator, and the simulation reproduced it faithfully.",
+      "am_says": "(r2 was BD's own document; AM imported the figure and built D-3 on it)",
+      "bd_says": "Exact OU through the run's own estimator configuration returns +0.8 to +1.2 %. The run reported +1.17 %. This is the fourth time in this repository that a 'physics discrepancy' turned out to be the analysis -- a trap tau 70 % high, an MSD plateau 3 % high, a D 9 % low -- and the device that settled all four is the same: synthetic data whose answer is known.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "bd"
+    },
+    {
+      "what": "The blur coefficient for a trapped bead is u/3, not 2u/3.",
+      "am_says": "r1 assumptions[camera_model]: 'finite exposure 0.45 ms deflates var(x) by 2*D*t_exp/3 = 1.86 %'.",
+      "bd_says": "That is the free-particle MSD term. Exact OU boxcar gives 2(u-1+e^-u)/u^2, i.e. u/3 = 0.92 % at your numbers. Measured at five u from 0.028 to 3: exact holds within 3.3 sigma, 2u/3 rejected at 16 to 358 sigma.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "am"
+    },
+    {
+      "what": "r2's own single-bead ratio was wrong too.",
+      "am_says": "(imported as '~32x' into the plan's D-4)",
+      "bd_says": "Measured 21.1x at T_obs/tau_k = 2000 and 15.5x at 310, not sqrt(1000) = 31.6x. f_c is fitted to 250 traces, not 1000, and averaging PSDs before a non-linear fit is not averaging fits. The ratio is the wrong thing to carry anyway -- the absolute single-bead scatter is 9.2 % and 29.1 %.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "bd"
+    },
+    {
+      "what": "No HOOMD time was spent finding any of this.",
+      "am_says": "(not addressed)",
+      "bd_says": "An exact OU sampler is unbiased at any step size, so it isolates the estimator and the detector from integration error -- which is what made the bias visible at all. A BD re-run would have carried Euler-Maruyama error into the same comparison and could not have separated them.",
+      "kind": "gap",
+      "resolution_owner": "bd"
+    },
+    {
+      "what": "Neither side has declared which Lorentzian estimator it uses, and the estimator is now known to be the dominant systematic.",
+      "am_says": "(not declared -- the plan says 'the Lorentzian f_c' without naming a fit)",
+      "bd_says": "Unweighted least squares of S0/(1+(f/f_c)^2) over the entire one-sided Welch PSD, PSDs averaged across traces before fitting. Now known to be biased by +0.8 to +1.2 % at 10 samples per tau_k and by up to +7.9 % elsewhere. Until both sides name the fit -- weighted or unweighted, and over what band -- the two are not measuring the same quantity, and a comparison between them is between two different estimators as much as between two systems. This is raised as a finding and not as an assumption because R4 makes an `unknown` assumption force `status: draft`, and a correction must not wait to be a draft; the protocol has no carve-out for that yet and one is proposed rather than assumed.",
+      "kind": "gap",
+      "resolution_owner": "human"
+    }
+  ],
+  "out_of_scope": [
+    "r3's sigma_f_c_single. Measured, but deliberately held for the next round -- see gaps[1].",
+    "Any restatement of how well f_c can be recovered. Withdrawn, not replaced.",
+    "The wall, h0, and the perpendicular Faxen coefficient, all carried over unchanged."
+  ],
+  "derived_from": [
+    {
+      "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json",
+      "hash": "sha256:d20427218c5cba73",
+      "rev": "c288df6",
+      "note": "the document this corrects; its status is now `corrected`."
+    },
+    {
+      "ref": "bd:verify/verify_detector_model.py",
+      "hash": "sha256:d022b00b2f50b166",
+      "rev": "a986c4d",
+      "note": "the blur-coefficient check, five values of u from 0.028 to 3."
+    },
+    {
+      "ref": "bd:verify/_out/fc_estimator_bias.json",
+      "hash": "sha256:b48c48c94ad2f0be",
+      "rev": "a986c4d",
+      "note": "the machine-readable output every number above is read from."
+    }
+  ],
+  "confirmed_by": null
+}
