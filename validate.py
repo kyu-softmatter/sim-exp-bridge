@@ -858,29 +858,29 @@ def resolve_manifest(manifest: dict, roots: dict[str, Path]) -> list[tuple]:
         via = "" if target == base else f"  (by `_subject_of` -> {target})"
         root, rel = _route(target, roots)
         if root is None:
-            rows.append((base, "no_root", f"{target.split(':')[0]}: has no checkout{via}"))
+            rows.append((base, "no_root", f"{target.split(':')[0]}: has no checkout{via}", ""))
             continue
         path = root / rel
         if not path.exists():
-            rows.append((base, "absent", f"{rel} is not in {root}{via}"))
+            rows.append((base, "absent", f"{rel} is not in {root}{via}", ""))
         elif path.is_dir():
-            rows.append((base, "no_recipe", f"{rel} is a directory{via}"))
+            rows.append((base, "no_recipe", f"{rel} is a directory{via}", ""))
         else:
             found = _sha16(path.read_bytes())
             hit = [k for k, v in sorted(registered.items()) if v == found]
             if hit:
-                rows.append((base, "ok_worktree", f"working tree = {hit[0]}{via}"))
+                rows.append((base, "ok_worktree", f"working tree = {hit[0]}{via}", ""))
             else:
                 rows.append((base, "advanced",
                              f"working tree is {found}, which is none of the "
                              f"{len(registered)} registered revision(s) "
                              f"({', '.join(sorted(registered))}){via}. Register "
                              f"this one as {base}@r<N> before citing it; do not "
-                             f"refresh the unsuffixed key."))
+                             f"refresh the unsuffixed key.", found))
     return rows
 
 
-def _citations(paths: list[Path]) -> tuple[dict[tuple[str, str, str], list[str]],
+def _citations(paths: list[Path]) -> tuple[dict[tuple[str, str, str, str], list[str]],
                                            list[str]]:
     """(ref, hash, rev) -> the documents carrying it.
 
@@ -888,7 +888,7 @@ def _citations(paths: list[Path]) -> tuple[dict[tuple[str, str, str], list[str]]
     `verify_drag_ladder.py` three times; the count is kept because "which
     documents does this dead rev reach" is the first question after a failure.
     """
-    out: dict[tuple[str, str, str], list[str]] = {}
+    out: dict[tuple[str, str, str, str], list[str]] = {}
     unread: list[str] = []
     for path in paths:
         text = path.read_text()
@@ -919,7 +919,9 @@ def _citations(paths: list[Path]) -> tuple[dict[tuple[str, str, str], list[str]]
             if isinstance(node, dict):
                 ref, h = node.get("ref"), node.get("hash")
                 if isinstance(ref, str) and isinstance(h, str):
-                    out.setdefault((ref, h, str(node.get("rev") or "")), []).append(where)
+                    key = (ref, h, str(node.get("rev") or ""),
+                           str(node.get("field") or ""))
+                    out.setdefault(key, []).append(where)
                 for value in node.values():
                     walk(value)
             elif isinstance(node, list):
@@ -942,36 +944,48 @@ def resolve_citations(paths: list[Path], roots: dict[str, Path],
     rows = []
     cites, unread = _citations(paths)
     for name in unread:
-        rows.append((name, "unread", "this document contributed no citations"))
-    for (ref, cited, rev), docs in sorted(cites.items()):
+        rows.append((name, "unread", "this document contributed no citations", ""))
+    for (ref, cited, rev, field), docs in sorted(cites.items()):
         # The cited hash is part of the identity, not decoration: two documents
         # may cite one path at one rev and disagree about what is there, which
         # is the whole point. The selftest caught this line without it -- two
         # cases collapsed onto one key and the passing one overwrote the
         # failing one, which is a fixture reporting on the wrong row.
-        seen = (f"{ref} @{rev or '-'} cites {cited}"
+        seen = (f"{ref}{'#' + field if field else ''} @{rev or '-'} cites {cited}"
                 f"  [{docs[0]}{f' +{len(docs) - 1}' if len(docs) > 1 else ''}]")
         if not rev:
             rows.append((seen, "no_rev", "the schema calls `rev` strongly wanted; "
-                                         "this is what it buys"))
+                                         "this is what it buys", ""))
             continue
         target = (subject or {}).get(ref.split("@")[0], ref)
         if target != ref:
             seen += f"  (by `_subject_of` -> {target})"
         root, rel = _route(target, roots)
         if root is None:
-            rows.append((seen, "no_root", f"{target.split(':')[0]}: has no checkout"))
+            rows.append((seen, "no_root", f"{target.split(':')[0]}: has no checkout", ""))
             continue
         status, blob = _git_blob(root, rev, rel)
+        if status == "no_recipe" and field:
+            # A directory has no content of its own -- but the citation already
+            # says what inside it was hashed. `field` is "the path inside the
+            # referenced artefact", and on the one directory ref in the thread
+            # it reads `metrics.json`, whose blob is the registered hash at the
+            # cited rev and at HEAD. Reading the document's own declaration is
+            # not the same as picking a convention for it: no `field`, no
+            # recipe, and `no_recipe` still stands.
+            status, blob = _git_blob(root, rev, f"{rel}/{field}")
+            if status == "ok_rev":
+                seen += f"  (by `field` -> {field})"
+                rel = f"{rel}/{field}"
         if status != "ok_rev":
-            rows.append((seen, status, f"git -C {root} cat-file -t {rev}:{rel}"))
+            rows.append((seen, status, f"git -C {root} cat-file -t {rev}:{rel}", ""))
             continue
         found = _sha16(blob)
         if found == cited:
-            rows.append((seen, "ok_rev", f"{cited} confirmed at {rev}"))
+            rows.append((seen, "ok_rev", f"{cited} confirmed at {rev}", ""))
         else:
             rows.append((seen, "rev_mismatch",
-                         f"document cites {cited}, blob at {rev} is {found}"))
+                         f"document cites {cited}, blob at {rev} is {found}", found))
     return rows
 
 
@@ -1060,6 +1074,22 @@ def _coverage_checks(expected: dict) -> list[str]:
         if doc_after_ref:
             out.append("hashes.json has a `_`-prefixed documentation key after a "
                        "ref key; keep them at the top.")
+
+        # A tool the manifest's own prose names is a citation like any other.
+        # `tools/rehash.sh` was named in `_comment` from the day the file
+        # existed and did not exist until 2026-09-16 -- R6 resolves the
+        # artefacts the DOCUMENTS cite and never looked at the manifest's own.
+        for key, value in raw.items():
+            if not (key.startswith("_") and isinstance(value, str)):
+                continue
+            for named in re.findall(r"tools/[\w./-]+", value):
+                tool = ROOT / named
+                if not tool.exists():
+                    out.append(f"hashes.json {key} names {named}, which does "
+                               "not exist. A cited tool is a citation.")
+                elif not os.access(tool, os.X_OK):
+                    out.append(f"hashes.json {key} names {named}, which is not "
+                               "executable, so the line that cites it is wrong.")
 
     threads = list(ROOT.glob("threads/*/r*/ask_*.json"))
     valid = list((ROOT / "fixtures/valid").glob("*.json"))
@@ -1287,47 +1317,51 @@ def _resolve_checks() -> list[str]:
         {"ref": "am:kb/thing.md@r2", "hash": h1, "rev": rev1},     # key suffix
         {"ref": "am:kb/proxy.md", "hash": h1, "rev": rev1},        # redirected
         {"ref": "am:kb", "hash": h1, "rev": rev1},                 # a tree
+        {"ref": "am:kb", "hash": h1, "rev": rev1,                  # …named
+         "field": "thing.md"},
     ]
     docfile = tmp / "doc.json"
     docfile.write_text(json.dumps(doc))
     broken = tmp / "broken.json"
     broken.write_text("{not json")
     want_cites = {
-        ("am:kb/thing.md", h1, rev1): "ok_rev",
-        ("am:kb/thing.md", h2, rev1): "rev_mismatch",
-        ("am:kb/thing.md", h1, "dead1beef"): "rev_missing",
-        ("am:kb/later.md", _sha16(b"new"), rev1): "rev_absent",
-        ("am:kb/thing.md", h1, ""): "no_rev",
-        ("bd:anything.py", h1, rev1): "no_root",
-        ("am:kb/thing.md@r2", h1, rev1): "ok_rev",
-        ("am:kb/proxy.md", h1, rev1): "ok_rev",
-        ("am:kb", h1, rev1): "no_recipe",
+        ("am:kb/thing.md", h1, rev1, ""): "ok_rev",
+        ("am:kb/thing.md", h2, rev1, ""): "rev_mismatch",
+        ("am:kb/thing.md", h1, "dead1beef", ""): "rev_missing",
+        ("am:kb/later.md", _sha16(b"new"), rev1, ""): "rev_absent",
+        ("am:kb/thing.md", h1, "", ""): "no_rev",
+        ("bd:anything.py", h1, rev1, ""): "no_root",
+        ("am:kb/thing.md@r2", h1, rev1, ""): "ok_rev",
+        ("am:kb/proxy.md", h1, rev1, ""): "ok_rev",
+        ("am:kb", h1, rev1, ""): "no_recipe",
+        ("am:kb", h1, rev1, "thing.md"): "ok_rev",
     }
 
     failures, seen = [], set()
     manifest_rows = resolve_manifest(manifest, roots)
-    got_manifest = {ref: status for ref, status, _ in manifest_rows}
+    got_manifest = {ref: status for ref, status, _d, _e in manifest_rows}
     for ref, want in want_manifest.items():
         seen.add(want)
         if got_manifest.get(ref) != want:
             failures.append(f"resolve/manifest {ref}: expected {want}, "
                             f"got {got_manifest.get(ref)}")
-    subject_row = [d for r, _, d in manifest_rows if r == "am:kb/proxy.md"]
+    subject_row = [d for r, _s, d, _e in manifest_rows if r == "am:kb/proxy.md"]
     if not subject_row or "_subject_of" not in subject_row[0]:
         failures.append("resolve/manifest: a redirected key does not say so in "
                         "its detail, so the reader cannot tell which file was read")
 
     rows = resolve_citations([docfile, broken], roots, manifest["_subject_of"])
-    if not any(st == "unread" and "broken.json" in what for what, st, _ in rows):
+    if not any(st == "unread" and "broken.json" in what
+               for what, st, _d, _e in rows):
         failures.append("resolve/citation: an unparseable document contributed "
                         "nothing and the run did not say so")
     seen.add("unread")
     got_cites = {}
-    for seen_str, status, _ in rows:
+    for seen_str, status, _detail, _extra in rows:
         got_cites[seen_str.split("  [")[0]] = status
-    for (ref, cited, rev), want in want_cites.items():
+    for (ref, cited, rev, field), want in want_cites.items():
         seen.add(want)
-        key = f"{ref} @{rev or '-'} cites {cited}"
+        key = f"{ref}{'#' + field if field else ''} @{rev or '-'} cites {cited}"
         if got_cites.get(key) != want:
             failures.append(f"resolve/citation {key}: expected {want}, "
                             f"got {got_cites.get(key)}")
@@ -1367,7 +1401,7 @@ def _root_head(path: Path | None) -> str:
         return "  (git unavailable)"
 
 
-def run_resolve(roots: dict[str, Path]) -> int:
+def run_resolve(roots: dict[str, Path], emit: bool = False) -> int:
     """`--resolve`. Opt-in, and it says what it did not check.
 
     It cannot run in CI: resolving `am:` and `bd:` needs the two agent
@@ -1391,10 +1425,10 @@ def run_resolve(roots: dict[str, Path]) -> int:
     rows = ([("manifest", *r) for r in resolve_manifest(manifest, roots)] +
             [("citation", *r) for r in resolve_citations(docs, roots, subject)])
     counts: dict[str, int] = {}
-    for _kind, _what, status, _detail in rows:
+    for _kind, _what, status, _detail, _extra in rows:
         counts[status] = counts.get(status, 0) + 1
 
-    for kind, what, status, detail in rows:
+    for kind, what, status, detail, _extra in rows:
         # `_subject_of` rows print even when they pass. A declared exception
         # that goes quiet is how the prose note it replaces got forgotten.
         if status.startswith("ok_") and "_subject_of" not in f"{what}{detail}":
@@ -1410,7 +1444,7 @@ def run_resolve(roots: dict[str, Path]) -> int:
     # `absent` next to the branch that produced it, because the branch is the
     # first candidate and the output otherwise makes it look like data loss.
     absent_sides: dict[str, int] = {}
-    for _kind, what, status, _detail in rows:
+    for _kind, what, status, _detail, _extra in rows:
         if status == "absent":
             side = str(what).split(":", 1)[0].split()[-1]
             absent_sides[side] = absent_sides.get(side, 0) + 1
@@ -1420,6 +1454,17 @@ def run_resolve(roots: dict[str, Path]) -> int:
               f"{_root_head(root) or ' not a git checkout'}. A path is absent "
               "because of the branch before it is absent because of anything "
               "else -- check the checkout before reading these as data loss.")
+
+    if emit:
+        pending = [(what, extra) for _k, what, status, _d, extra in rows
+                   if status == "advanced" and extra]
+        print("\n// hashes.json lines to ADD. Nothing is written: the round "
+              "number is yours to name, and\n// the unsuffixed key must not "
+              "move -- every citation below it points at the old content.")
+        for what, found in pending or []:
+            print(f'  "{what}@r<N>": "{found}",')
+        if not pending:
+            print("  (none: every registered path matches a registered revision)")
 
     checked = sum(n for s, n in counts.items() if s not in ("no_root", "no_rev"))
     errors = sum(n for s, n in counts.items() if s in RESOLVE_ERRORS)
@@ -1445,6 +1490,10 @@ def main() -> int:
                     help="R6's resolve branch: open every registered revision "
                          "and every cited `rev` in the checkout that owns it. "
                          "Needs --root; not in CI, which has neither clone.")
+    ap.add_argument("--emit-registrations", action="store_true",
+                    help="with --resolve: print the hashes.json lines to ADD "
+                         "for every path that has moved past all of its "
+                         "registered revisions. Prints; never writes.")
     ap.add_argument("--root", action="append", default=[], metavar="side=PATH",
                     help="am=PATH or bd=PATH, repeatable. Also read from "
                          "BRIDGE_ROOT_AM / BRIDGE_ROOT_BD. Never defaulted to a "
@@ -1466,7 +1515,7 @@ def main() -> int:
         for side, where in roots.items():
             if not where.is_dir():
                 ap.error(f"--root {side}={where}: not a directory")
-        return run_resolve(roots)
+        return run_resolve(roots, emit=args.emit_registrations)
 
     paths = list(args.paths)
     if args.all or not paths:

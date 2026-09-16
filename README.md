@@ -305,9 +305,15 @@ owning session does that, which is the same boundary `confirmed_by` draws.
   of them, so it is reachable from CI.
 - **8 citations carry no `rev` at all.** They resolve to nothing by
   construction; `no_rev` counts them instead of calling the run clean.
-- **A directory ref has no recipe.** `bd:runs/trap-2d-5um__a5ef4f45d589` is a
-  directory, and its registered hash is — measured, not documented anywhere —
-  its `metrics.json`. The branch reports `no_recipe` rather than inventing one.
+- **A directory ref had no recipe, and now has a declared one.** A directory
+  has no bytes of its own, so `bd:runs/trap-2d-5um__a5ef4f45d589` was reported
+  `no_recipe` rather than given a convention. The recipe was not invented
+  afterwards either — it was already written down twice and read by nothing:
+  the three citations of that ref carry `"field": "metrics.json"`, and the
+  registered value is that file's hash at the cited rev **and** at HEAD. So the
+  resolver reads `field` when a ref resolves to a directory, the manifest
+  records the same thing in `_subject_of`, and `no_recipe` still stands for a
+  directory nobody declared. Nothing was re-registered.
 
 **The first run also produced three defects that were the resolver's own**, and
 that is the part worth keeping: `path@r3` opened as a filename (R13's form, in
@@ -317,6 +323,16 @@ deliberately holds another artefact's hash reading as a dead rev. Three of six
 "findings" were the checker. They are now cases in the selftest, because the
 hour that separated them from the two real ones is the cost of rediscovering
 them.
+
+`tools/rehash.sh` — named in `hashes.json`'s own `_comment` since the day the
+file existed, and **absent for all of it** — is the same failure one level out:
+R6 resolves the artefacts the *documents* cite and never looked at the ones the
+*manifest* cites. It exists now, it delegates to `validate.py` rather than
+carrying a second copy of the hashing recipe, and it **prints and writes
+nothing**: the round number in `@r<N>` is a human's to name, and refreshing an
+unsuffixed key starts the cascade the revision convention exists to stop. The
+selftest fails if a `tools/…` path named in the manifest's prose is missing or
+not executable — checked by deleting it and by clearing its executable bit.
 
 That last one is declared in the manifest instead of in prose. `_subject_of`
 maps `am:bridge/.../r1/ask_simulation.json` to AM's plan — r1's ask was
@@ -834,9 +850,10 @@ Recorded as trades rather than as claims, at BD's request:
   [resolve branch](#the-resolve-branch--r6-opens-the-file), after a second
   instance appeared — the `.md` twin of the document whose `.json` had just
   been corrected by hand. What replaces it is smaller and still open: **two
-  real unresolvable citations nobody has repaired**, **8 citations with no
-  `rev`**, **no hashing recipe for a directory ref**, and the branch is **not
-  in CI** even though its rootless half would cover one of the two findings.
+  real unresolvable citations**, **10 citations with no `rev`**, and the branch
+  is **not in CI** even though its rootless half would cover one of the two
+  findings. The directory-ref recipe that was open here is
+  [closed](#the-resolve-branch--r6-opens-the-file) — declared, not invented.
 
 ### And the gate was not pointed at the thing it was built for
 
@@ -878,6 +895,7 @@ fixtures/valid/                 regression guards for deliberate loosenings
 proposals/                      schema change requests from either side
 prompts/                        the request text pasted into each agent session
 hashes.json                     the manifest R6 checks against, and `_subject_of`
+tools/rehash.sh                 what `hashes.json` names: prints lines to add
 validate.py                     the thirteen rules
 ```
 
