@@ -1,13 +1,29 @@
-# bridge — agentic-microscope ↔ Brownian-Dynamics-Agent
+# sim-exp-bridge
 
-A schema and two worked round-trips for handing a **question** between the two
-agents, so each one re-derives its own plan through its own gates instead of
+[![selftest](https://github.com/kyu-softmatter/sim-exp-bridge/actions/workflows/selftest.yml/badge.svg)](https://github.com/kyu-softmatter/sim-exp-bridge/actions/workflows/selftest.yml)
+
+A protocol for handing a **question** between two research agents — an optical
+microscope ([agentic-microscope](https://github.com/kyu-softmatter/agentic-microscope))
+and a Brownian-dynamics simulator
+([Brownian-Dynamics-Agent](https://github.com/kyu-softmatter/Brownian-Dynamics-Agent))
+— so that each one re-derives its own plan through its own gates instead of
 importing the other's numbers.
 
-```
+Four JSON schemas, a validator with thirteen rules, and one worked eight-round
+thread in which every number is copied from a real artefact in one of the two
+repositories.
+
+```bash
 python3 validate.py --selftest      # CI entry point: the rules still bite
 python3 validate.py --all           # every document, warnings included
 ```
+
+Most of this file is the record of what the exercise cost. If you are here for
+one thing, it is [Two patterns](#two-patterns-and-what-they-cost) — two failure
+modes that recurred across three independently written codebases, and the
+procedure that catches the second one.
+
+---
 
 ## What crosses, and what does not
 
@@ -58,7 +74,7 @@ only *after* the receiver has derived its own.
 model", "1000 non-interacting replicas" — none of these follows from any value,
 so they must cross explicitly, each marked `shared | differs | unknown` with a
 `worth` (how much it moves the answering quantity). While anything is `unknown`
-the document is a **draft** (rule R4).
+the document must declare it (rule R4).
 
 Two systems may differ freely in SI values as long as the regime brackets and the
 assumptions are declared: agreement across *different realisations of the same
@@ -76,25 +92,34 @@ dangerous case.
 |---|:-:|---|
 | `measured` | 0 | on the sending instrument |
 | `handbook` | 0 | |
-| `computed` | 1 | …from measured inputs. **Inherits** the worst tier of its inputs — AM's `eta` is tier 3 here because it is computed from an assumed `T`. |
+| `computed` | 1 or 3 | **inherits** the worst tier of its inputs — AM's `eta` is tier 3 here because it is computed from an assumed `T` |
 | `assumed` | 3 | a standing choice, a default, a placeholder |
-| `simulated` | — | not admissible as a tier-0 input; lands as an external KB entry |
+| `simulated` | — | not admissible as a tier at all; lands as an external KB entry |
 | `round_trip` | — | this number originated in the receiving repository |
 
-## The seven rules
+## The thirteen rules
 
-Only R1 is a shape rule. The others are about provenance, which no schema
-expresses.
+Only R1 is a shape rule. The rest are about provenance, which no schema
+expresses. `T1` and the severity order both live in `validate.py` as the single
+copy.
 
 | | rule | what it prevents |
 |---|---|---|
+| R0 | the document parses | — |
 | R1 | JSON Schema | malformed document |
 | R2 | every `unit` parses | `pN/µm` with the micro sign silently becoming something else |
 | R3 | no composites in `system_primitives` | the `3πηd` / `6πηa` factor of two |
-| R4 | an `unknown` assumption forces `status: draft` | an undeclared assumption difference reading as agreement |
+| R4 | an `unknown` assumption is declared as unresolved | an undeclared assumption difference reading as agreement |
 | R5 | a **hard** requirement may not rest on the consumer's own number | circular evidence: three rounds and both KBs agree with nothing measured twice |
-| R6 | cited hashes match `hashes.json` | a stale import, after upstream was corrected |
+| R5b | a consumer-origin quantity carries `evidence: round_trip` | a value that came home being invisible to anything parsing the JSON |
+| R6 | cited hashes match a registered revision | a stale import after upstream was corrected |
 | R7 | `confirmed_by` is never a machine name | the bridge signing off on itself |
+| R8 | a shipped `tier` is reachable from its `evidence` | the sender using the receiver's vocabulary with a different meaning |
+| R9 | a `simulated` entry is not in a `calibrations` namespace | a path that asserts a measurement that never happened |
+| R10 | `evidence_class` is the worst of `evidence_classes` | a citation reading better than the entry's weakest number |
+| R11 | a same-origin quantity agrees across rounds | a copy that drifted, propagating at the speed of the protocol |
+| R12 | every `gaps[]` entry has a `kind` | "write code", "change method" and "move bytes" being one field |
+| R13 | a `ref` is a path, not a path plus a revision | masking R6's own revision branch |
 
 R5 is deliberately narrow. After two rounds the other repository *always* appears
 in your ancestry — that is a round trip working. What it catches is a number
@@ -121,139 +146,76 @@ Two properties matter more than the file format:
   citation. Both repositories already have supersession machinery
   (`superseded_by` / `corrected_by`); use it.
 
-## 이 스레드의 실제 헤드라인: 싸게 측정할 수 있는 것을 추정했다
+## A cited document is not edited — metadata included
 
-여덟 라운드가 물리에 대해 알아낸 것보다, **네 번 반복된 한 가지 실패**가 더 옮겨갈 만하다.
-매번 형태가 같다 — 값이 하나 추정되고, 조심스러운 문서들에 실려 전파되고, 누군가
-**실제로 측정하자 무너졌다.** 그리고 매번 측정 비용이 낮았다.
+R6 checks a **live manifest** against a **frozen citation**. So when the hash of
+an already-cited document moves, every citation below it breaks, and **the
+obvious response — refresh the hash — is exactly the wrong move.** The refresh
+invalidates the next citation down, and that propagates without limit.
 
-| # | 추정된 것 | 측정했을 때 | 며칠/라운드 생존 |
+It happened, and two parties each did half. Commit `4652273` (the bridge owner)
+added `gaps[].kind` to r2 — content preserved exactly as written, hash moved
+anyway. r8 broke. The BD session then refreshed the unsuffixed `bd:` key and r4
+broke, since r4 cites r2. Refreshing r4 broke r5 and r7. **The shape became
+clear on the third try — that is, the obvious fix was tried repeatedly by
+someone who could watch it failing.** That is what makes this worth warning
+about. The edit caused it, the refreshes propagated it, and neither mistake
+alone is a cascade.
+
+**This is not specific to that incident.** `gaps[].kind`, `assumptions_resolved`
+and `corrects[]` were all added to a **live thread**, and the first two were
+applied retroactively to documents that predate them. R12 and R13 warning
+forever on the old ones is not a wart — it is the only thing that records **when
+the vocabulary changed**, and a backfill erases that. The r2 edit was the single
+case where retroactive application looked free because the content was
+preserved, and it was the one that broke.
+
+Two layers:
+
+1. **Do not edit a cited document, metadata included.** A new field belongs in
+   new documents. Checking whether a document is cited before editing it is one
+   command, and it was not run.
+2. **R6 passes a citation matching any registered revision.** The unsuffixed key
+   keeps verifying old citations; `@r<N>` carries the revision a later document
+   was written against. **Never refresh an unsuffixed key.**
+
+Exempting `fixtures/valid/` from R6 was the same insight one layer down. This is
+the round-document version of it.
+
+### A sealed document containing a falsehood is still sealed
+
+There is a second variant of the pull to edit, and it is harder to resist than
+the first. Not "a warning text implies a task" but **"the document contains
+something untrue, therefore fix the document"** — BD's r8 cited a file at a
+revision where it did not exist. The hash was correct throughout; only the `rev`
+pointed at nothing. Leaving a falsehood in place reads as the negligent option.
+
+The remedy has **two tiers**, and without the distinction the rule defeats
+itself: **a remedy more expensive than the temptation does not get followed.**
+One question decides which: *does any downstream conclusion change?*
+
+| | where the falsehood is | remedy | cost |
 |---|---|---|---|
-| 1 | r2 의 `f_c` 정밀도 +1.17 % — "물리" | 추정기 편향. 정확한 OU 를 같은 추정기에 넣으면 +0.8–1.2 % | 2라운드 |
-| 2 | r1 의 blur `2 D t_exp/3` | OU 의 정확한 boxcar 인수는 `u/3`. 2배 차이, `2u/3` 는 16–358σ 로 기각 | 3라운드 |
-| 3 | r1 의 rung 당 3 % — numpy 토이 모델 | 단일 비드 29.1 %. 그리고 주 경로의 slope 정밀도는 **아직 아무도 측정하지 않았다** | 7라운드, 진행 중 |
-| 4 | 검증기 경고 부피 — "아직 조치할 필요 없음" | 이미 11회 반복, 출력 11,787자 | 즉시 |
-| 5 | r8 의 `rev: 07d1048` — 커밋됐다고 가정된 파일 | 그 리비전에 파일이 없다. 해시는 옳고 `rev` 가 아무것도 가리키지 않았다 | 여러 커밋, 푸시된 상태로 |
+| **it changes** | the claims. r2's `achieved_precision` — load-bearing, six dependents | a **new document** carrying `corrects[]` | one round document. Worth it |
+| **it does not** | the citation apparatus. r8's wrong `rev` — one token, no conclusion moves | **register both revisions** in the manifest (unsuffixed stays where existing citations point, `@r<N>` carries the current one) | one line |
 
-5번도 BD 가 스스로 지적했다. 그리고 **`rev` 가 해석되는지는 아무것도 검사하지 않는다** —
-R6 은 해시를 검증하고 만족한다. 그게 옳은 분업이다(해시가 내용을 고정하고 `rev` 는 사람이
-가서 보기 위한 것). 다만 `rev` 는 조용히 틀릴 수 있고, 한 번 그랬다. **한 사례는 규칙이
-아니므로 만들지 않는다** — 두 번째를 알아볼 수 있게 여기 적어둔다. 재발하면 싼 형태는
-`--selftest` 가 `bd:` rev 를 BD 리포의 실제 객체와 대조하는 것이지만, 검증기를 리포 배치에
-묶는 비용이 얻는 것보다 클 수 있다.
+Both keep the document sealed; they differ only in publication cost. Demanding a
+full `ask_experiment` for a one-token `rev` is a rule that will not be kept.
 
-4번은 BD 세션이 스스로 지적했고, **자기가 그 실패를 한 첫 사례**라는 점까지 적었다.
-1–3 번을 찾아낸 쪽이 같은 형태에 걸린 것이 요점이다 — 이 실패는 부주의가 아니라
-**추정이 그 순간에는 항상 충분해 보인다**는 데서 온다.
+Recorded in the order it was reached, at BD's request: BD edited first, R6 caught
+it, and the repair turned out to be the right remedy. The lesson is not that it
+knew the cheap path — it is that **the cheap path was invisible from where it
+stood**, the same shape as `rev` being invisible to both sessions when they
+independently invented `@r<N>`.
 
-그래서 이 리포가 규칙을 늘려온 방향도 같다: R8·R11·R12·R13 은 전부 "숫자가 검사 없이
-문서 사이를 이동했다" 를 잡는다. **측정 비용이 낮은데 추정했다면, 그것이 다음에 무너질
-것이다.**
+## Citing a document at a revision
 
-## 고칠 수 없는 문서에 발화하는 규칙은 자기 메시지에 그렇게 적어야 한다
-
-R8·R12·R13 세 규칙이 옛 문서에 **영구 경고**를 낸다. 세 개 다 같은 이유다 — 그 문서들은
-해당 필드/규약이 없던 시절에 쓰였고, 경고가 서 있는 것이 **어휘가 언제 바뀌었는지를
-기록하는 유일한 장치**다. 부채가 아니다.
-
-그런데 경고가 그 사실을 말하지 않으면 **첫 독자가 과제로 읽고 봉인된 파일을 고친다 —
-그게 cascade 다, 한 층 위에서.** 실제로 그 경로로 발생했다: R12 는 "`gaps[]` 에 `kind` 가
-없다" 고만 말했고, 브리지 소유자가 그것을 읽고 r2 에 백필했다.
-
-**변종 하나가 더 있고, 저항하기가 더 어렵다.** 경고가 과제로 읽히는 것이 아니라,
-**문서가 사실과 다른 것을 담고 있으므로 고쳐야 한다** 고 느껨지는 경우다. BD 의 r8 이
-존재하지 않는 리비전에서 파일을 인용하고 있었다 — 해시는 내내 옳았고 `rev` 가 아무것도
-가리키지 않았다. 거짓을 그대로 두는 것이 태만한 선택처럼 보이므로, 첫 변종보다 강하게
-편집을 밀어붙인다. 그리고 r8 은 이미 AM 의 수입본이 인용하고 있었다.
-
-**봉인된 문서에 거짓이 있어도 봉인은 유지된다.** 다만 구제 수단은 **두 단계**이고, 이
-구분이 빠지면 규칙이 스스로 무너진다 — **구제가 유혹보다 비싸면 다음 사람은 그냥
-편집한다.**
-
-판별 질문 하나: **하류의 결론이 하나라도 움직이는가?**
-
-| | 거짓의 위치 | 구제 | 비용 |
-|---|---|---|---|
-| **움직인다** | 주장(claims). r2 의 `achieved_precision` — 하중을 받고 의존물 6개 | `corrects[]` 를 담은 **새 문서** | 라운드 문서 하나. 그만한 값이 있다 |
-| **안 움직인다** | 인용 장치(citation apparatus). r8 의 잘못된 `rev` — 토큰 하나, 결론 이동 없음 | 매니페스트에 **두 리비전 등록** (접미사 없는 키는 기존 인용이 가리키는 곳에, `@r<N>` 에 현재 것) | 한 줄 |
-
-둘 다 봉인을 유지한다. 다른 것은 **발행 비용뿐**이다. 잘못된 `rev` 하나에 전체
-`ask_experiment` 를 발행하라고 요구하면 그 규칙은 지켜지지 않는다.
-
-**이 결론에 도달한 순서를 정직하게 적어둔다** (BD 세션의 요청): BD 는 먼저 편집했고,
-R6 에 걸렸고, **그 수리가 결과적으로 올바른 구제였다.** 교훈은 "싼 경로를 알고 있었다"
-가 아니라 **싼 경로가 서 있던 자리에서 보이지 않았다** 는 것이다 — `rev` 가 AM 과 BD
-양쪽에게 보이지 않아서 둘이 독립적으로 `@r<N>` 를 발명한 것과 같은 형태다.
-
-## 두 번째 패턴: 검사가 존재하는데 자기가 서술하는 것에 연결되어 있지 않다
-
-"싸게 측정할 수 있는 것을 추정했다" 와는 다른 실패이고, 이제 세 사례다.
-
-| 검사 | 서술한 것 | 실제로 읽은 것 |
-|---|---|---|
-| 브리지 `chain` | "R5 가 요구한다" | `validate.py` 에 그 문자열이 0회 등장 |
-| AM `plan-check` | plan 의 형태 | 링크를 하나도 해석하지 않음 — `kb/decisions/` 인용 3개가 다른 브랜치에만 있는 엔트리를 가리켰고, 그게 ROI·노출·520 fps 의 출처였다 |
-| BD `health.gate()` | (BD 리포 기록) | 서술한 대상에 연결되지 않음 |
-
-BD 세션의 `CLAUDE.md` 가 자기 리포에서 이미 세 개를 들고 있었다 — `bd-intake` §2.1 의
-빈-goal 차단(두 번 쓰이고 0번 집행, 8사례 중 2개가 그냥 지나가 85런을 생산), `A4` 의
-grep(거짓 일치 7건, 실제 검사 0건), `health.gate()`(형제 도구에서만 도달 가능해서 어떤
-런도 자기를 gate 하지 않음). 거기에 브리지의 `chain` 과 AM 의 `plan-check` 을 더하면
-**세 코드베이스에 다섯 개, 같은 사람이 독립적으로 만든 것**이다.
-
-그중 `health` 한 모듈에 **독립적인 두 사례**가 있고, 그게 가장 강한 데이터다 —
-다만 "두 번 발견됐다" 보다 정확한 진술이 있다. `health.gate()` 는 **호출 그래프를 읽어서**
-발견됐고, `Guard` 의 abort 들은 **커버리지로** 발견됐다. **어느 방법도 다른 쪽 사례를 찾지
-못한다**: 읽기는 "도달 가능하고 올바른 가드가 한 번도 행사되지 않았다" 를 드러내지 못하고,
-커버리지는 "올바른 함수에 호출자가 아예 없다" 를 드러내지 못한다 — **호출되지 않는 함수는
-놓칠 줄이 없기 때문이다.** 두 방법, 두 맹점, 한 모듈.
-
-그래서 주장이 바뀐다: 한 프로젝트가 우연히 가진 기록이 아니라 **기본값**이다. 다음 사람은
-자기가 걸렸다고 느낄 필요가 없고, **예상해야 한다.**
-
-세 경우 다 **검사가 통과했고 통과가 아무것도 의미하지 않았다.** 추정 패턴은 숫자를
-겨냥하고 누군가 측정하는 순간 무너진다. 이 패턴은 **검사 자체**를 겨냥하고,
-**통과하기 때문에 보이지 않는다** — 스스로를 드러내는 순간이 없다. 그래서 방어가 다르다:
-앞의 것은 누군가 측정을 돌려야 하고, 뒤의 것은 **누군가 규칙을 일부러 실패시켜야** 한다.
-
-### 일반형
-
-1. **규칙당 음성 픽스처 하나.** 그 규칙만 발화해야 한다.
-2. **경로가 둘 이상인 규칙에는 인라인 분기 검사.** R6 의 다섯 개는 철저함이 아니라
-   **최소치**였다 — 리비전 분기는 BD 가 자기 우회책을 제거할 때까지 라이브 트리에서
-   도달 불가능했고, 다섯 중 넷이 멀쩡해 보이는 동안 하나가 죽어 있었다.
-3. **음성 픽스처는 실패가 *일어났다*가 아니라 실패의 *정체*를 주장해야 한다.** BD 의
-   harness 가 `12 fired, 0 did NOT` 을 출력했고 그중 7개가 자기 호출 시그니처가 틀려서
-   난 `TypeError` 였다 — **잘못된 이유로 통과하는 검사기를 찾으려고 쓴 스크립트가 바로 그
-   상태였다.** 이 리포도 한 단계 미세한 수준에서 같았다: `--selftest` 는 올바른 *규칙*을
-   요구했고, **분기가 넷인 R6 이 엉뚱한 분기로 옮겨가도 통과**했다.
-   `fixtures/invalid/expected.json` 이 픽스처별 메시지 조각을 고정하고, 조각을 일부러
-   틀리게 바꾸면 `R6 fired for the WRONG reason` 으로 실패하는 것을 확인했다.
-
-세 번째 절이 가장 늦게 왔고 가장 중요하다. 1과 2는 **죽은** 검사를 잡고, 3은
-**살아 있으면서 엉뚱한 것을 확인하는** 검사를 잡는다. 후자가 더 나쁘다 — 통과가 증거처럼
-보이기 때문이다. 그리고 ad-hoc 형태(개별 호출 12개)가 절차를 적용하는 사람이 **처음
-집어드는 형태**이며, 그것이 공허하게 통과할 수 있는 형태다.
-
-**그리고 이 일반형이 이 리포에서 네 개를 더 찾았다.** `chain` 은 읽어서 발견됐고
-(BD 의 지적대로 *발견*의 방어는 검사가 될 수 없다), 그 다음은 절차가 했다: 에러를 내는
-규칙 중 픽스처도 라이브 발화도 없는 것을 열거하니 **R0·R1·R9·R10** 이 나왔다. 넷 다
-픽스처를 만들자 통과했다 — 즉 죽어 있던 게 아니라 **아무도 본 적이 없었다.** 발견은
-읽기에 의존하지만, 일반형은 그것을 **절차로 바꾼다.**
-
-그리고 실무적으로: **편집 전에 그 문서가 인용되고 있는지 확인하는 것은 명령 한 줄이다.**
-
-그래서 규칙 문구의 요건: **발화 대상이 고칠 수 없는 문서라면, 메시지가 "봉인된 문서는
-그대로 두고 새 문서에만 적용하라" 를 직접 말한다.** R13 이 처음부터 그렇게 쓰였고,
-R8·R12 는 뒤늦게 맞췄다.
-
-## 특정 리비전을 인용하는 정식 방법
-
-R13 이 필요했던 이유는 우회책 하나가 그것을 필요하게 만든 제약보다 오래 살았다는 것이고,
-**두 세션이 서로 베끼지 않고 같은 우회책에 독립적으로 도달했다**는 것이다. 둘 다 그것을
-우회책이 아니라 규약처럼 적었다. 같은 잘못된 모양에 둘이 도달한 것은 그 아이디어가
-나쁘다는 증거로는 약하고, **올바른 모양이 발견 불가능했다**는 증거로는 강하다. 그래서
-여기에 한곳에 적는다:
+R13 exists because a workaround outlived the constraint that made it necessary,
+and because **two sessions reached the same workaround independently rather than
+by copying**. Both wrote it as if it were the convention rather than as a
+workaround. Two people reaching for the same wrong shape is weak evidence that
+the idea is bad and strong evidence that **the right shape was undiscoverable**.
+So it is written out here once, with an example:
 
 ```json
 { "ref":  "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md",
@@ -261,240 +223,386 @@ R13 이 필요했던 이유는 우회책 하나가 그것을 필요하게 만든
   "hash": "sha256:58cfc405231a2970" }
 ```
 
-- `ref` 는 **경로일 뿐이다.** `@r<N>` 를 넣지 않는다 (R13).
-- `rev` 가 리비전을 말한다 — 커밋 sha 가 최선, 브랜치명도 가능.
-- `hash` 가 그 리비전의 내용을 고정한다.
-- 매니페스트(`hashes.json`)에서만 `<ref>@r<N>` 키 형태를 쓴다. R6 가 등록된 **어느**
-  리비전과 일치해도 통과하므로, 나중 라운드는 키를 **추가**하고 접미사 없는 키를 **갱신하지
-  않는다.**
+- `ref` is **a path and nothing else.** No `@r<N>` in it (R13).
+- `rev` names the revision — a commit sha is best, a branch name is acceptable.
+- `hash` pins the content at that revision.
+- `<ref>@r<N>` is a **manifest key form only**, used in `hashes.json`. R6 passes
+  a citation matching **any** registered revision, so a later round **adds** a
+  key and **never refreshes** the unsuffixed one.
 
-### `rev` 자체가 썩을 수 있는 인용이다
+A path-only ref is ambiguous, and this thread's own plan file proved it:
+`58cfc405` on `main`, `514da4a0` on `worktree-work-2026-09-16`, and **absent
+from `version2`**. Three answers to one ref leaves R6 not knowing what it checks.
 
-`rev` 는 **인용 장치를 검증 가능하게** 만들려고 추가됐다. 그런데 `rev` 자체가 아무것도
-가리키지 않을 수 있고, 한 번 그랬다 — BD 의 r8 이 커밋되지 않은 파일을 `rev: 07d1048`
-에서 인용했다. **해시는 내내 옳았다.** 즉 `rev` 가 막으려던 실패의 형태를 `rev` 가 가졌다.
+### `rev` is itself a citation that can rot
 
-그리고 R6 은 그것을 잡지 못한다 — **기록된 해시를 검사하고 디스크의 파일은 절대 보지
-않는다.** 이건 의도된 분업이고(해시가 내용을 고정, `rev` 는 사람이 가서 보기 위한 것)
-대가를 명시해야 한다: `rev` 는 **검증되지 않는 필드**다.
+`rev` was added to make the citation apparatus verifiable. Then a `rev` pointed
+at nothing — BD's r8 cited an uncommitted file at `rev: 07d1048`, **with the
+content hash correct throughout**. The field added to prevent that failure had
+it.
 
-접미사 키 규약이 이걸 세 번째로 흡수했다 — r2 의 메타데이터 백필, r8 의 해시 이동,
-그리고 이 `rev` 정정. 세 번 다 접미사 없는 키가 기존 인용이 가리키는 곳에 남고 `@r<N>`
-가 현재 것을 나른다. **cascade 없이.**
+And R6 cannot catch it: it checks a recorded hash and **never a file on disk**.
+That division is deliberate — the hash pins content, the `rev` is for a human to
+go look — and the cost has to be stated rather than implied: **`rev` is an
+unverified field.**
 
-## 봉인된 문서는 메타데이터조차 고치지 않는다
+The suffixed-key convention has now absorbed three things that would each have
+cascaded: r2's metadata backfill, r8's hash move, and this `rev` correction. Each
+time the unsuffixed key stayed where existing citations point.
 
-R6 는 **살아있는 매니페스트**를 **얼어붙은 인용**과 대조한다. 그래서 이미 인용된 문서의
-해시가 움직이면 그 아래 모든 인용이 깨지고, **명백한 대응인 "해시 갱신" 이 정확히
-틀린 수다.** 갱신은 다음 인용을 무효화하고, 그게 무한히 번진다.
+## A correction does not wait its turn
 
-실제로 일어났고, 두 사람이 각자 몫을 했다. `4652273`(브리지 소유자)이 r2 에
-`gaps[].kind` 를 붙였다 — 내용은 쓰인 대로 보존했지만 해시가 움직였다. r8 이 깨졌다.
-여기서 BD 세션이 접미사 없는 `bd:` 키를 갱신했고 r2 를 인용하는 r4 가 깨졌다. r4 를
-갱신했더니 r5 와 r7 이 깨졌다. **세 번째에서 형태가 드러났다 — 즉 명백한 수정이 실패하는
-것을 보면서 반복해서 시도됐다.** 그게 이 예시가 경고할 가치가 있는 이유다. 편집이 원인을
-만들었고, 갱신이 그것을 전파했으며, 두 실수 중 어느 하나만으로는 cascade 가 되지
-않는다.
+Round parity (odd = experiment, even = simulation) governs **new questions**
+only. The side that discovers its own earlier answer was wrong does not wait for
+its turn — it is the only party that could have found it. It carries
+`corrects[]` and `status: supersedes_prior`; the corrected document becomes
+`status: corrected`.
 
-**이것은 이 사건에 국한되지 않는다.** `gaps[].kind`, `assumptions_resolved`,
-`corrects[]` 는 모두 **살아있는 스레드**에 추가됐고, 앞의 둘은 그 필드가 없던 시절의
-문서에 소급 적용됐다. 옛 문서에 R12·R13 이 영구히 경고하는 것은 흠이 아니라 **어휘가
-언제 바뀌었는지를 기록하는 유일한 장치**다 — 소급 백필은 그 사실을 지운다. r2 편집은
-내용이 보존되어서 소급 적용이 공짜처럼 보인 유일한 경우였고, 그게 깨진 경우였다.
+**`corrects[].downstream` is not left empty.** A correction that does not name
+its dependents leaves them silently wrong, which is worse than the original
+error because it now looks reviewed. What happened on 2026-09-15 was exactly
+that shape: BD found r2's +1.17 % to be an estimator bias rather than physics,
+and r2's `T_obs >= 32.3 s` requirement existed *precisely because* that 1.17 %
+"was measured at `T_obs/tau_k = 2000`". A bias does not shrink with `T_obs`, so
+the requirement's basis was gone — and at that moment AM was already drafting r3
+on top of it.
 
-두 겹으로 막는다:
+**`downstream` turned out to be load-bearing for R11**, which was designed two
+commits later. The field was required on an argument alone; R11 is now the
+mechanism that makes that argument true rather than advisable. r4 is clean
+*because* it filled `downstream` in — had it not, `blur_on_var_x` would now
+error across r1 and r4. Two things designed independently met.
 
-1. **인용된 문서는 고치지 않는다 — 메타데이터도 포함.** 새 필드가 생기면 새 문서에만
-   쓴다. R12 가 옛 문서에 영구히 경고하는 것이 옳고, 그 경고가 "이 문서는 그 필드가
-   없던 시절에 쓰였다" 는 사실을 보존한다. 내가 r2 를 건드린 것이 실수였다.
-2. **R6 는 등록된 어느 리비전과 일치해도 통과한다.** 매니페스트의 `@r<N>` 규약을 R6 가
-   읽는다. 접미사 없는 키는 옛 인용을 계속 검증하고, `@r<N>` 는 나중 문서가 대조한
-   리비전이다. **접미사 없는 키를 갱신하지 말 것.**
+## R4 does not look at `status`
 
-`fixtures/valid/` 를 R6 에서 면제한 것이 한 층 아래의 같은 통찰이었다. 이쪽이 라운드
-문서 버전이다.
+An unresolved assumption must be **declared as unresolved** — not "the document
+must be a draft". Those are different claims, and fusing them blocks a
+correction: `supersedes_prior` exists so a fix does not wait, and requiring
+`draft` alongside it means **a correcting document cannot carry a newly found
+unknown.** That happened in r4 on 2026-09-15, and BD moved the item into
+`findings[]` rather than weaken it — filing an undeclared assumption as a
+disagreement, which is what R4 exists to prevent.
 
-## 대화로 전달된 결론은 출처가 아니다
+The cause did not need a carve-out. **`status` was carrying two orthogonal
+facts**: where a document is in its lifecycle, and whether its assumptions are
+all declared. They are separate now.
 
-**이 브리지가 존재하는 이유가 그것이다.** 그런데 세 세션이 서로 메시지를 보낼 수 있게
-되자 브리지 소유자(나)가 발견을 채팅으로 중계하기 시작했고, 그게 편리한 만큼 정확히
-브리지를 무용하게 만든다. 해시도 ref 도 리비전도 없는 주장은 나중에 감사할 수 없다.
+```yaml
+assumptions_resolved: false     # works with any status
+status: draft                   # the older form, still valid (back-compatible)
+```
 
-AM 세션이 이 선을 먼저 그었다. BD 의 벽 발견과 동일한 결론에 도달한 뒤, plan 의 D-6 을
-**자기 리포의 독자 도출로 쓰고 그 문장에 그렇게 명시했으며**, `k*` 의 정의를 인용했다 —
-나도 BD 도 인용하지 않았다. 물리를 의심한 게 아니라, **provenance chain 에 "동료가
-말해줬다" 가 들어간 plan 은 감사 불가능**하기 때문이다.
+`fixtures/valid/c6-correction-with-unknown.json` is the regression guard for
+that loosening. `fixtures/invalid/` proves a rule still bites; `fixtures/valid/`
+proves it does not bite what it should allow.
 
-규약:
+## `evidence` is authoritative; `tier` is non-normative
 
-- **세션 간 메시지는 조정(coordination)과 프로토콜용이다.** 누가 무엇을 소유하는지,
-  무엇이 푸시됐는지, 어느 규칙이 왜 바뀌었는지.
-- **발견은 라운드 문서로 건너간다.** `ask_*.json` + 해시 + `rev`. 그게 감사 가능한
-  유일한 형태다.
-- **중계된 발견은 출처가 아니라 "가서 보라"는 신호로 취급한다.** 받은 쪽은 직접
-  도출하거나 문서가 도착할 때까지 기다린다. AM 이 `k*` 산술을 직접 다시 해본 것이
-  올바른 반응이다 (21219 대 r2 표의 21221, 그리고 그 식이 `k_t`·`d`·`kT` 를 나르고
-  **drag 를 나르지 않는다**는 확인).
+The sender writes `evidence` only. The receiver **derives** the tier and ignores
+whatever is on the wire, because the field is not derivable in general —
+`computed` inherits the worst tier of its inputs and the wire does not carry the
+inputs. And it drifted silently: across r1–r5 one `computed` class shipped as
+tier **1, 2 and 3**, and every tier-2 case descended from six values in r1 that
+were copied forward into three later rounds. Tier 2 in BD's scale means
+"literature, unverified", which is not what a model output from
+`trapping/goa.py` is — **the sender was using the receiver's vocabulary with a
+different meaning and nothing checked it.**
 
-브리지 소유자도 예외가 아니다. 이 문서의 규칙 변경 근거를 메시지에 적는 것은 조정이고,
-스레드의 물리적 결론을 메시지로 옮기는 것은 우회다.
+R8 warns on a tier not reachable from its evidence. Do not put `tier` in new
+documents.
 
-## 블록마다 독자가 다르다 — `gaps[]` 는 운영자에게 닿지 않는다
+## Several kinds of evidence in one entry is the normal case
 
-`gaps[]` 를 `ask_simulation` 에 추가한 근거는 "체크리스트 항목으로 쓴 precondition 은
-닫을 수 있어 보인다" 였다. AM 이 그 논거를 더 정확히 썼다: **닫을 수 있어 보이는 그
-자리를 고쳐야 하고**, `gaps[]` 는 상대 에이전트가 읽는 블록이지 장비 앞에서 plan 을 펴는
-**운영자**가 읽는 곳이 아니다.
+A single `evidence_class` becomes a lie. r1's import carried `d` and
+`pixel_size` (genuinely measured) alongside `T` (assumed — AM's own precondition
+P3 blocks on a thermometer), `eta` (computed from that assumption) and `k_t` (a
+model output), while the frontmatter said `measured`. The body table said so
+correctly, but **a citation surfaces the path and the frontmatter, not the body
+table.**
 
-그러니 둘 중 하나가 아니다. 같은 사실이 두 집을 갖는다: 브리지의 `gaps[]` 에
-`kind: needs_data_transfer` 로, 그리고 행동하는 리포의 precondition 자리에 *분석 시간이
-아니라 데이터 전송에 막혀 있다*로. AM 의 P7 이 그 형태다 (`af68322`).
+Use `evidence_classes: {symbol: evidence}` and set `evidence_class` to the
+**worst** entry in it (R10; order `measured = handbook < computed < simulated =
+round_trip < assumed`). Keeping only the worst and discarding the map would throw
+away the fact that `d` and `pixel_size` really are measured.
 
-## 공유 클론 위생 — 세 가지
+## R11 — a copy that drifted across rounds
 
-세 세션이 한 클론을 쓴다. 모든 커밋의 git author 가 같은 사람이므로 **이력만으로는
-어느 쪽이 썼는지 구분되지 않는다.** 라운드 기록의 저자가 모호해지면 소유권 표가
-사후적으로 검증 불가능해진다.
+The two defects this thread actually produced are one shape, not two accidents.
+`2 D t_exp / 3` was wrong in r1 and still wrong three rounds later, because every
+later document had copied it. Six `tier` values in r1 were unreachable from their
+own `evidence` and propagated into r2, r3 and r5 the same way. **Each document
+was careful and nothing checked between documents.**
 
-1. **`git commit -am` 을 쓰지 않는다.** 상대가 스테이징해 둔 미완성 작업이 같이
-   올라간다. `git commit --only <경로>` 로 자기 경로만 커밋한다. 실제로 발생했다:
-   `hashes.json` 과 `r5/kb_entry_for_am.md` 가 AM 에 의해 스테이징된 상태에서 브리지
-   소유자가 커밋하려던 순간.
-2. **상대의 untracked 파일은 방해가 되더라도 건드리지 않는다.** `git add -A` 가
-   쓸어담는다. 실제로 발생했다: `84b1530` 이 AM 의 `r4/kb_entry_for_am.md` 를 함께
-   커밋했다 — 내용은 동일해서 잃은 것은 없었지만, 그 라운드 기록의 저자가 모호해졌다.
-3. **커밋 메시지에 어느 쪽인지 적는다.** author 로는 구분되지 않으므로 트레일러로
-   남긴다:
+`origin` is the discriminator:
+
+| | meaning | R11 |
+|---|---|---|
+| same symbol, **same origin** | the later one is a **copy** | they must agree — disagreement is an **error** |
+| same symbol, **different origin** | both sides derived it **independently** | reported, never an error. AM's `f_c = 9.9 Hz` against BD's `9.86 Hz` is a round-trip check passing |
+
+A disagreement named in any document's `corrects[]` is a declared supersession
+and is exempt.
+
+`R11_TOL = 1e-3`. Re-deriving `kT` in a later round and printing one more figure
+moves it by ~1e-4 relative; the drifts this rule exists for are factors (`2u/3`
+against `u/3` is 2×). Two decades above the noise this thread actually produced,
+three below its smallest real drift.
+
+## What R5's soft warning bought
+
+r2's `sigma_gamma_per_rung <= 3 %` was AM's own 400-realisation numpy estimate
+coming home, so R5 warned; it passed because it was `hard: false` and disclosed
+in `gaps[]`. **Four rounds later that number turned out to be holding up the
+experiment's primary route** — r5's 29.1 % is the cross-check path, the plan runs
+on the drag slope `alpha = gamma*v/x_eq`, and the slope's per-rung precision has
+never been measured by either side. The ~3 % the entire error budget rests on is
+that unverified numpy figure.
+
+What is worth recording is not the judgement of whoever applied the label —
+`hard: false` was **forced** (R5 errors otherwise) and `gaps[]` was the only
+honest place left. It is the **shape**: the rule could not tell that
+`sigma_gamma_per_rung` was load-bearing, only that it had **come home
+undeclared**, and four rounds later that was enough. A warning that names a
+number without ranking it beat both sides' ranking, because both spent four
+rounds on `f_c` while the primary route was the drag slope.
+
+That is the argument for leaving soft warnings in place. A rule that cannot rank
+can still point, and pointing alone paid.
+
+## A conclusion relayed in chat is not a source
+
+**That is why this bridge exists.** And yet once three sessions could message
+each other, the bridge owner started relaying findings in chat — which is
+exactly as convenient as it is corrosive. A claim with no hash, no ref and no
+revision cannot be audited later.
+
+The AM session drew the line first. Having reached BD's wall conclusion
+independently, it wrote the plan's D-6 as **its own repository's derivation and
+said so in the paragraph**, citing the definition of `k*` rather than citing
+either peer. Not doubt about the physics — a plan whose provenance chain reads
+"a peer told me" **cannot be audited**.
+
+- **Messages are for coordination and protocol.** Who owns what, what has been
+  pushed, which rule changed and why.
+- **Findings cross as round documents.** `ask_*.json` plus hash plus `rev`. That
+  is the only auditable form.
+- **A relayed finding is a prompt to go look, never a source.** The receiver
+  re-derives it or waits for the document. AM re-running the `k*` arithmetic was
+  the correct response (21219 against 21221 in r2's table, plus the check that
+  the expression carries `k_t`, `d` and `kT` and **no drag**).
+
+The bridge owner is not exempt. Writing down why a rule changed is coordination;
+moving the thread's physics into a message is a bypass.
+
+## Blocks have different readers — `gaps[]` does not reach the operator
+
+`gaps[]` was added to `ask_simulation` on the argument that "a precondition
+written as a checklist item reads closeable". AM used that argument more
+precisely: **the place that reads closeable is the place to fix**, and `gaps[]`
+is read by the other agent, not by the operator standing at the instrument with
+the plan open.
+
+So it is not either/or. One fact gets two homes: `kind: needs_data_transfer` in
+the bridge's `gaps[]`, and in the acting repository's own precondition, *blocked
+on a data transfer rather than on analysis time*. AM's P7 is that shape.
+
+## Shared-clone hygiene — three rules
+
+Three sessions share one clone, and every commit carries the same git author, so
+**the history cannot say which side wrote a thing.** When the authorship of a
+round's record is ambiguous, the ownership table is unverifiable after the fact.
+
+1. **Do not use `git commit -am`.** It lands whatever the other side has staged.
+   Use `git commit --only <paths>`. This nearly happened: `hashes.json` and
+   `r5/kb_entry_for_am.md` were staged by AM at the moment the bridge owner went
+   to commit.
+2. **Leave the other side's untracked files alone even when they are in the
+   way.** `git add -A` lands them. This did happen: `84b1530` committed AM's
+   `r4/kb_entry_for_am.md` — byte-identical, nothing lost, but the authorship of
+   that round's record became ambiguous.
+3. **Say which side you are in the commit message**, since the author field
+   cannot:
 
        Bridge-Session: am | bd | owner
 
-`--selftest` 는 이것을 검사하지 않는다. 검사할 수 있는 성질이 아니고, 규약으로 두는
-것이 맞다.
+`--selftest` does not check this. It is not a checkable property, and a
+convention is the honest form.
 
-## R5 의 soft 경고가 값을 했다 — 기록
+## A skipped rule is not a passed rule
 
-r2 의 `sigma_gamma_per_rung <= 3 %` 는 AM 자신의 400회 numpy 추정치가 되돌아온
-것이어서 R5 가 경고를 냈고, `hard: false` + `gaps[]` 공개라서 통과했다. **네 라운드 뒤에
-그 숫자가 이 실험의 주 경로 전체를 받치고 있다는 것이 드러났다** — r5 의 29.1 % 는
-교차검증 경로이고, plan 의 주 경로는 drag slope `alpha = gamma*v/x_eq` 인데 그 rung 당
-정밀도는 **양쪽 누구도 측정한 적이 없다.** 오차 예산이 기대고 있는 ~3 % 가 바로 그
-미검증 numpy 값이다.
+Under `--selftest`, a missing `jsonschema` / `referencing` / `PyYAML` is an
+**error, not a warning**. BD's `simulation_bot` interpreter has no `jsonschema`,
+and `--selftest` run there printed "selftest clean" having never executed R1. A
+checker that reports clean with a rule switched off is the exact failure both
+repositories keep writing down. The selftest now prints its interpreter path on
+the first line.
 
-즉 R5 가 지목한 것은 사소한 라벨 문제가 아니라 **스레드에서 가장 중요한 미검증
-숫자**였다.
+It also **refuses to pass on nothing.** With every fixture and every thread
+deleted it used to print "0 fixtures, all pinned" and "selftest clean", exit 0 —
+vacuously true. BD's `ci.yml` carries the same guard for a shell loop (`if [
+"$checked" -eq 0 ]; then echo "::error::no SEALED.sha256 found -- this job
+silently passed on nothing"`), because a seal job that finds no seals is green.
 
-기록할 것은 그 라벨을 붙인 쪽의 판단이 아니다 — `hard: false` 는 **강제된** 것이고(그러지
-않으면 R5 가 에러다), `gaps[]` 는 남은 유일하게 정직한 자리였다. 기록할 것은 **형태**다:
-규칙은 `sigma_gamma_per_rung` 이 하중을 받는다는 것을 알 수 없었고, 그것이 **선언 없이
-집으로 돌아왔다**는 것만 알 수 있었다. 그런데 4라운드 뒤에 그것으로 충분했다. 숫자를
-지목하되 순위를 매기지 않는 경고가 **양쪽의 순위 판단을 이겼다** — 주 경로가 drag slope
-인 동안 양쪽 다 4라운드를 `f_c` 에 썼기 때문이다.
+## A rule that fires on documents nobody may fix must say so
 
-이것이 soft 경고를 남겨두는 논거다. 순위를 매길 수 없는 규칙도 지목은 할 수 있고,
-지목만으로도 값을 한다.
+R8, R12 and R13 produce **permanent warnings** on old documents, all for the same
+reason: those documents were written before the field or convention existed, and
+the standing warning is **the only record of when the vocabulary changed**. It is
+not debt.
 
-## R11 — 라운드를 건너 드리프트한 복사본
+But if the warning does not say that, **the first reader treats it as a task and
+edits a sealed file — which is the cascade again, one layer up.** That is how it
+actually happened: R12 said only that a `gaps[]` entry had no `kind`, and the
+bridge owner read it and backfilled r2.
 
-이 스레드가 실제로 낳은 결함 두 개는 서로 다른 사고가 아니라 **한 가지 형태**다.
-`2 D t_exp / 3` 은 r1 에서 틀렸고 세 라운드 뒤에도 틀려 있었다 — 이후 모든 문서가
-복사했기 때문이다. r1 의 여섯 `tier` 값은 자기 `evidence` 에서 유도되지 않았고 같은
-방식으로 r2·r3·r5 로 번졌다. **각 문서는 조심스러웠고, 문서 사이를 검사하는 것이
-아무것도 없었다.** 두 건이면 이 스레드의 우연이라고 부르기 어렵다.
+So a requirement on rule *wording*: **if a rule fires on documents that cannot be
+fixed, its own message says "leave sealed documents alone; carry the field in new
+ones."** R13 was written that way from the start; R8 and R12 were corrected
+afterwards.
 
-판별자는 `origin` 이다:
+BD's sharper statement of why this outranks the cascade lesson: a rule that
+describes a defect without naming who may repair it does not merely fail to
+prevent the edit — **it recruits the next careful reader into making it**,
+because being careful looks like clearing the warning. The cascade needed two
+parties and a coincidence; this needs one conscientious reader.
 
-| | 뜻 | R11 |
+---
+
+## Two patterns, and what they cost
+
+Eight rounds established some physics. Two recurring failures are more
+transferable than any of it.
+
+### Pattern 1 — estimating what was cheap to measure
+
+Same shape every time: a value is estimated, propagates through careful
+documents, and collapses the moment somebody measures it. The measurement was
+cheap throughout.
+
+| # | what was estimated | what measuring returned | survived |
+|---|---|---|---|
+| 1 | r2's `f_c` precision +1.17 % — "physics" | the estimator. Exact OU through the same estimator gives +0.8–1.2 % | 2 rounds |
+| 2 | r1's blur term `2 D t_exp/3` | the exact OU boxcar factor is `u/3`. A factor of 2; `2u/3` rejected at 16–358σ | 3 rounds |
+| 3 | r1's 3 % per rung — a numpy toy model | 29.1 % for a single bead. And the primary route's slope precision **is still unmeasured** | 7 rounds, ongoing |
+| 4 | validator warning volume — "not yet worth acting on" | already 11 repetitions, 11,787 characters of output | immediately |
+| 5 | r8's `rev: 07d1048` — a file assumed committed | the file does not exist at that revision. Hash correct, `rev` pointing at nothing | several commits, while pushed |
+
+Instances 4 and 5 were raised by the BD session against itself — **the party
+that had found 1 through 3.** That is the point: the failure is not carelessness,
+it is that **an estimate always looks sufficient at the moment it is made.**
+
+The rules this repository grew point the same way. R8, R11, R12 and R13 all catch
+"a number moved between documents without being checked."
+
+Nothing checks whether a `rev` resolves. R6 verifies the hash and is satisfied,
+which is the right division of labour — but a `rev` can be silently wrong, and
+one was. **One instance is not a rule**, so no rule was written; it is recorded
+here so a second is recognisable. If it recurs, the cheap form is a `--selftest`
+check that every `bd:` rev is a real object in the BD repository — but that
+couples the validator to two external layouts, which may cost more than it buys.
+BD's failing case was an external `bd:verify/...` ref, so a bridge-internal
+subset would not have caught it.
+
+### Pattern 2 — a check that exists and is not wired to what it describes
+
+A different failure, and by the end it had more instances than the first.
+
+| check | what it claimed | what it actually read |
 |---|---|---|
-| 같은 symbol, **같은 origin** | 뒤의 것은 앞의 것의 **복사본** | 일치해야 한다 — 어기면 **에러** |
-| 같은 symbol, **다른 origin** | 양쪽이 **독립 도출** | 보고만 한다. AM 의 `f_c = 9.9 Hz` 대 BD 의 `9.86 Hz` 는 왕복 검사가 통과한 것이고 결함이 아니다 |
+| the bridge's `chain` | "required by R5" | the string appears zero times in `validate.py` |
+| AM's `plan-check` | the shape of a plan | no link resolved at all — three `kb/decisions/` citations pointed at entries existing only on another branch, and those three were the sources of its ROI, its exposure and its 520 fps |
+| BD's `health.gate()` | (recorded in BD's own CLAUDE.md) | reachable only from a sibling tool, so no run ever gated itself |
+| BD's `bd-intake` §2.1 empty-goal blocker | refuses a case with no goal | written twice, enforced zero times; 2 of 8 cases walked past it and produced 85 runs |
+| BD's `A4` grep | a real check | seven false hits, never a check |
 
-어느 문서의 `corrects[]` 가 지목한 불일치는 **선언된 supersession** 이므로 면제된다 —
-`corrects[]` 가 존재하는 이유가 그것이다.
+Five across three codebases, written independently by the same person. **So it is
+not a record one project happens to hold — it is the default**, and the next
+person should expect it rather than feel caught out by it.
 
-**`corrects[].downstream` 이 R11 의 하중을 받는다.** 그 필드는 "의존물을 지목하지 않는
-정정은 그것들을 조용히 틀린 상태로 남긴다"는 **논증**만으로 필수화됐고, R11 은 두 커밋
-뒤에 따로 설계됐다. 그런데 이제 R11 이 그 논증을 **권고가 아니라 사실로 만드는
-메커니즘**이다: r4 는 `downstream` 을 채웠기 때문에 깨끗하고, 채우지 않았다면 지금
-`blur_on_var_x` 가 r1↔r4 에서 에러를 낸다. 독립적으로 설계된 두 개가 만났고, 이 문장은
-그게 우연이 아니라 같은 요구의 두 얼굴이었다는 기록이다.
+Two of them are in one module, and the precise version of that is stronger than
+"found twice": `health.gate()` was found by **reading the call graph**; the
+`Guard` aborts were found by **coverage**. Neither method finds the other's
+instance. Reading does not reveal that a reachable, correct guard is never
+exercised, and coverage does not reveal that a correct function has no caller at
+all — **because an uncalled function has no lines to miss.** Two methods, two
+blind spots, one module.
 
-`R11_TOL = 1e-3`. 나중 라운드에서 `kT` 를 다시 계산하고 한 자리 더 찍으면 상대 1e-4
-움직이고, 이 규칙이 노리는 드리프트는 배수다 (`2u/3` 대 `u/3` 는 2배). 이 스레드가
-실제로 만든 잡음보다 두 자리 위, 실제 드리프트보다 세 자리 아래다.
+In all of them the check passed and passing meant nothing. Pattern 1 targets
+numbers and collapses the moment anyone measures. Pattern 2 targets the checks
+and is **invisible because it passes** — there is no moment at which it announces
+itself. So the defences differ: the first needs someone to run the measurement,
+the second needs **someone to make the rule fail on purpose.**
 
-## `evidence` 가 권위이고 `tier` 는 비규범이다
+### The general form
 
-보내는 쪽은 `evidence` 만 쓴다. `tier` 는 **받는 쪽이 유도**하고, 와이어에 실린 값은
-무시된다. 일반적으로 유도 자체가 불가능하기 때문이다 — `computed` 는 입력 중 최악
-tier 를 상속하는데 와이어는 입력을 나르지 않는다. 그리고 실제로 조용히 갈라졌다:
-r1–r5 에서 `computed` 한 클래스가 tier 1·2·3 **세 값 전부**로 실렸고, tier 2 인 것들은
-전부 r1 의 여섯 값에서 나와 이후 세 라운드로 복사되어 번졌다. BD 척도의 tier 2 는
-"문헌, 미검증" 인데 `trapping/goa.py` 의 모델 출력은 그게 아니다 — **보내는 쪽이 받는
-쪽의 어휘를 다른 뜻으로 쓰고 있었고 아무도 검사하지 않았다.**
+1. **One negative fixture per rule.** That rule and only that rule may fire.
+2. **Inline branch checks wherever a rule has more than one path.** R6's five
+   were the **minimum**, not thoroughness — its revision branch was unreachable
+   in the live tree until BD removed its own workaround, so four of five would
+   have looked fine while one was dead.
+3. **A negative fixture must assert the failure's *identity*, not that a failure
+   occurred.** BD's harness printed `12 fired, 0 did NOT` while 7 of the 12 were
+   `TypeError` from its own wrong call signatures — **a checker passing for the
+   wrong reason, inside the script written to find checkers that pass for the
+   wrong reason.** This repository had the same hole one level finer:
+   `--selftest` required the right *rule*, and R6 has four branches, so a fixture
+   could drift to the wrong branch and still pass. `fixtures/invalid/expected.json`
+   now pins a message fragment per fixture, and breaking one on purpose yields
+   `R6 fired for the WRONG reason`.
 
-R8 이 유도 불가능한 tier 에 경고한다. 새 문서에는 `tier` 를 넣지 말 것. T1 은
-`validate.py` 의 `T1` 딕셔너리가 유일한 사본이고, `computed` 가 `{1, 3}` 인 것은
-범위가 실제로 범위이기 때문이다.
+Clause 3 arrived last and matters most. Clauses 1 and 2 catch a check that is
+**dead**; clause 3 catches a check that is **alive and verifying the wrong
+thing**. The second is worse, because passing looks like evidence. And the
+ad-hoc form — a handful of individual calls — is what anyone applying the
+procedure reaches for first, and is the form that can pass vacuously.
 
-## 한 엔트리에 증거가 여러 종류인 것이 정상이다
+**The same coarse-key mistake appeared three times**, always as the obvious key:
+rule-level instead of branch-level (the bridge's fixtures), exception-type
+instead of message (BD's negative tests), and the raising line's source text
+instead of the full expression (BD's AST inventory, where two branches of
+`Guard.check` both read `raise RuntimeError(` and collided). Each time the
+coarser key made two distinct failures look like one.
 
-`evidence_class` 하나로는 거짓말이 된다. r1 의 수입 엔트리는 `d`·`pixel_size`(진짜
-측정)와 `T`(가정 — AM 자신의 P3 이 온도계를 기다리며 막고 있다), `eta`(그 가정에서
-계산), `k_t`(모델 출력)를 **같이** 담고 있었는데 frontmatter 는 `measured` 라고 적혀
-있었다. 본문 표는 맞게 적혀 있었지만, **인용이 표면에 드러내는 것은 경로와
-frontmatter 이고 본문 표가 아니다.**
+### What the general form then found
 
-`evidence_classes: {symbol: evidence}` 맵을 쓰고, `evidence_class` 는 그 맵의 **최악**을
-적는다 (R10, 순서: measured = handbook < computed < simulated = round_trip < assumed).
-최악만 남기고 맵을 버리면 `d` 와 `pixel_size` 가 진짜 측정이라는 사실이 사라진다.
+`chain` was found by reading, and **discovery cannot itself be a check** — that
+is BD's point and it stands. But the general form is a **procedure**, and it
+converted "found by reading, which cannot be relied on" into findings nobody had
+to notice:
 
-## R4 는 status 를 보지 않는다
+- **Here:** enumerating error-producing rules with neither a negative fixture nor
+  a live firing returned **R0, R1, R9, R10**. All four passed once fixtures
+  existed — they were never dead, nobody had ever seen them run. That enumeration
+  is now a check rather than a one-off: any rule that can raise must have a
+  negative fixture, derived from the source, verified forward with a throwaway
+  `rep.err("R99", ...)`.
+- **In BD's repository:** 154 error sites, **88 never executed** under a
+  1440-test suite, 38 of them in gate modules — including `health.Guard`'s
+  `[NUM_NONFINITE]` and `[NUM_DIVERGE]` aborts, whose entire job is to stop a
+  diverging run.
 
-미해결 가정은 **미해결이라고 선언**되어야 한다 — "문서가 draft 여야 한다"가 아니다.
-둘은 다른 주장이고, 합쳐 놓으면 정정이 막힌다: `supersedes_prior` 는 정정이 순번을
-기다리지 않게 하려고 있는데, 거기에 `draft` 를 같이 요구하면 **정정 문서가 새로 발견한
-unknown 을 실을 수 없다.** 실제로 2026-09-15 r4 에서 일어났고, BD 는 내용을 약화시키는
-대신 그 항목을 `findings[]` 로 옮겼다 — 선언되지 않은 가정을 불일치로 접수한 것이고,
-R4 가 존재하는 이유가 바로 그 둘이 다르다는 것이다.
+So: **discovery needs a reader; coverage does not.**
 
-원인은 carve-out 이 필요한 게 아니라 **`status` 가 직교하는 두 사실을 나르고 있었던**
-것이다: 문서의 수명주기 위치와, 가정이 모두 선언되었는지. 이제 분리되어 있다.
+### And the gate was not pointed at the thing it was built for
 
-    assumptions_resolved: false     # 어떤 status 와도 함께 쓸 수 있다
-    status: draft                   # 예전 방식, 여전히 유효 (하위호환)
+Both sides, different failures, same consequence.
 
-`fixtures/valid/c6-correction-with-unknown.json` 이 이 완화의 회귀 가드다.
-`fixtures/invalid/` 는 규칙이 아직 무는지를 증명하고, `fixtures/valid/` 는 규칙이 허용해야
-할 것을 물지 않는지를 증명한다.
+- **Here:** `--selftest` existed for days, both agent repositories have CI, and
+  the bridge had no `.github` at all. A checker nobody runs is a checker that
+  does not exist, in the repository that had spent several commits saying so.
+- **In BD's repository:** `ci.yml` is correctly configured and correctly
+  triggered — on `push` to `main` and on `pull_request` — while the work sits on
+  a branch with no remote and no PR. Ten commits CI has never seen, including
+  the test added to stop a checker from rotting. And its own header states that
+  CI covers linux-64 and **not** the development platform, so "1459 passed
+  locally" and "CI green" are two platforms that have never intersected.
 
-## 스킵된 규칙은 통과한 규칙이 아니다
+Also worth stating because it is the same family: pytest reports a parametrised
+test with an empty parameter list as **skipped**, and calls that green. Clearing
+`CASES` gave "1 passed, 1 skipped", exit 0 — one commit after that file was
+wired specifically so it could not rot.
 
-`--selftest` 에서는 `jsonschema` / `referencing` / `PyYAML` 의 부재가 **경고가 아니라
-에러**다. BD 의 simulation_bot 인터프리터에는 jsonschema 가 없어서 거기서 돌린
-`--selftest` 가 R1 을 한 번도 실행하지 않은 채 "selftest clean" 을 출력했다. 규칙 하나가
-꺼진 상태로 clean 을 보고하는 검사기는 두 리포가 계속 적어두고 있는 바로 그 실패다.
-selftest 는 이제 첫 줄에 인터프리터 경로를 찍는다.
-
-## 정정은 순번을 따르지 않는다
-
-라운드 순번(홀수 = 실험, 짝수 = 시뮬)은 **새 질문**에만 적용된다. 자기가 앞서 낸
-답이 틀렸다는 걸 발견한 쪽은 순번을 기다리지 않고 말한다 — 그걸 말할 수 있는 쪽은
-그 한 쪽뿐이다. `corrects[]`를 싣고 `status: supersedes_prior`로 보내며, 정정된
-문서는 `status: corrected`가 된다.
-
-`corrects[].downstream`은 비워두지 않는다. **의존물을 지목하지 않는 정정은 그것들을
-조용히 틀린 상태로 남긴다.** 2026-09-15에 실제로 일어난 일이 그 형태였다: BD가 r2의
-+1.17 %가 물리가 아니라 추정기 편향이라는 것을 찾았고, r2의 `T_obs >= 32.3 s`
-요구사항은 *그 1.17 %가 `T_obs/tau_k = 2000`에서 측정됐다는 근거로* 존재했다. 편향은
-`T_obs`로 줄지 않으므로 그 요구사항의 근거가 사라졌는데, 같은 시각 AM은 이미 r3를
-그 위에 쓰고 있었다.
-
-## 리비전 없는 ref는 ref가 아니다
-
-`ref`에 `rev`(커밋 sha, 없으면 브랜치명)를 같이 싣는다. 경로만 있는 참조는 브랜치마다
-다른 답을 준다 — 이 스레드의 plan 파일이 실제로 그랬다: `main`에서 `58cfc405`,
-`worktree-work-2026-09-16`에서 `514da4a0`, `version2`에는 **아예 없다**. 하나의 ref에
-세 가지 답이 나오면 R6의 해시 검사는 무엇을 검사하는지 모르는 상태가 된다.
+---
 
 ## Layout
 
@@ -509,19 +617,29 @@ threads/trap-stiffness-recovery/
       kb_entry_for_bd.md        …as it lands in BD's knowledge/external/am/
   r2/ ask_experiment.{md,json}  BD answers f_c to 1.17 %, refuses h0
       kb_entry_for_am.md        …as it lands in AM's kb/external/bd/
-fixtures/invalid/               one file per rule; see its README
-hashes.json                     upstream hashes, for R6
-validate.py                     the seven rules
+  r3 … r8/                      the rest of the thread
+fixtures/invalid/               one per rule, plus expected.json pinning identity
+fixtures/valid/                 regression guards for deliberate loosenings
+proposals/                      schema change requests from either side
+prompts/                        the request text pasted into each agent session
+hashes.json                     the manifest R6 checks against
+validate.py                     the thirteen rules
 ```
 
 Threading is `<thread>/r<N>`, not by title. Titles collide or drift by round 3,
 and the commonest failure in a round-trip loop is not that a step was wrong — it
 is that after three rounds nobody is asking the original question any more.
 
+Round numbers **may have holes**. r6 absent with r7 present is not a lost
+document — it is the other side's turn not yet taken while parity held and the
+unblocked side continued. `reply_to` makes it self-describing (r7 replies to r5).
+Do not renumber to close a hole: that breaks parity and deletes what the hole was
+saying.
+
 ## The worked thread
 
-`trap-stiffness-recovery` is real on both sides:
-AM's `kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md` and BD's
+`trap-stiffness-recovery` is real on both sides: AM's
+`kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md` and BD's
 `runs/trap-2d-5um__a5ef4f45d589`. Every number in the fixtures is copied from one
 of those two, and `hashes.json` holds their actual SHA-256 prefixes.
 
@@ -543,6 +661,29 @@ that neither repository would have produced alone:
 
 Finding 4 is the one to note: it is BD reporting against its own result.
 
+By r7 the question had been **inverted**, which is the move the thread turned on.
+Four rounds asked what precision the run achieves — a question whose answer
+neither side controls. r7 asks instead for the **tolerance**: the largest
+per-rung scatter at which the six-rung fit still returns `h0` to ±0.2 µm. That
+is a property of the **fit**, so it survives its own inputs, and it decoupled the
+two sides' unknowns. Every earlier round produced an answer that would have to be
+redone if its input moved; that one does not.
+
+The wall turned out to be **not buildable** rather than not yet built. At fixed
+`h` the wall's only effect is a scalar `gamma`, which enters no dimensionless
+group the trap case carries — `k*` is 21221 at all six rungs, identically, so all
+six are the *same* dimensionless run and Faxén lives entirely in the
+back-transform. No runner there can learn anything about a wall, for the same
+reason a rod's `gamma_perp/gamma_par` measures 1.000000 in that repository. Five
+rounds had framed it as a missing capability, and r1's own `wall_drag` assumption
+had already named the alternative: test the fit procedure on a synthetic
+`gamma(h)`, do not report a number from an infinite medium.
+
+The thread's one remaining decision point is AM's precondition P7, and it is
+`needs_data_transfer` with `owner: human`: the 2026-09-03 tracked positions live
+on the instrument PC under `D:\codes`, and the AM repository holds no trajectory
+data at all. No instrument time is needed — only the bytes.
+
 ## Transport — what is actually needed to move a file
 
 Nothing. Both agents are Claude Code sessions with shell and file tools, so a
@@ -552,7 +693,7 @@ round*, not how bytes move.
 | | when it is the right answer |
 |---|---|
 | **shared directory** | same machine, one operator. Zero new code. Start here. |
-| **a third git repo** ← recommended | gives R6 its hashes for free, survives two machines, and makes every round reviewable as a diff |
+| **a third git repo** ← what this is | gives R6 its hashes for free, survives two machines, and makes every round reviewable as a diff |
 | **direct call** | **asymmetric and only one way works.** `python cli.py run` is LLM-free, so an AM session can execute BD's simulator directly. The reverse cannot exist: AM ends at hardware and human preconditions. |
 | **MCP** | different machines, or when you want a declared tool interface. AM already ships `mcp_server/`. Overkill for file movement alone. |
 
@@ -570,12 +711,16 @@ round small enough to review.
 
 **AM** — emit `plan_experiment_<title>.json` beside the plan (the parsers in
 `knowledge/plans.py`, `_section()` and `_table_rows()`, already do most of the
-work), add `kb/external/bd/` as a namespace, and extend `plan-check` with one
-rule: every number in a prose table must exist in the structured block. That rule
-is hard rule 2 made mechanical, so it pays for itself.
+work), and extend `plan-check` with one rule: every number in a prose table must
+exist in the structured block. That rule is hard rule 2 made mechanical, so it
+pays for itself — and it is the rule that would have caught the `2 D t_exp/3`
+blur term, which was prose arithmetic in a plan that no gate ever read.
 
 **BD** — an adapter `ask_simulation.json → observation.yaml + system.yaml`
 (beside `bdbot/intake.py`), the reverse `metrics.json → ask_experiment.json`
 using the `groups` and `back_transform` blocks `spec.json` already carries, and
-the two cheap gaps from r2: a sampling layer (integrate over `t_exp`, add
-Gaussian `epsilon`) and a run at `n_replicas = 1` for per-realisation scatter.
+the 26 error paths still recorded as `known_unobserved`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
