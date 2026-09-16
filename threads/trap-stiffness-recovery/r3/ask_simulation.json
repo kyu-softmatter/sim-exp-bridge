@@ -8,8 +8,9 @@
   "plan_ref": {
     "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md@r3",
     "hash": "sha256:514da4a0c550b783",
+    "rev": "35575cb",
     "field": "What Brownian dynamics answered, and the three decisions it hands back",
-    "note": "Same plan file as r1, revised by this round: it now carries D-1..D-4 answering r2's four findings. The r1-era hash 58cfc405231a2970 stays in hashes.json under the unsuffixed key so r1 and r2 keep verifying -- one manifest key per round of the sender's own plan, because a plan that does not change between rounds is a plan nobody answered. Proposed as a convention; no schema change."
+    "note": "Same plan file as r1, revised by this round: it now carries D-1..D-4 answering r2's four findings. `rev` is the AM commit on branch worktree-work-2026-09-16 that made that revision, per the README's 'a ref without a revision is not a ref' -- and r1's own 9f971a8 is the other answer to the same path. The two mechanisms are complementary, not redundant: `rev` says WHICH revision a ref means, while the '@r<N>' manifest key is what lets R6 hold two of them at once, since hashes.json has one value per key and the r1-era 58cfc405 must keep verifying for r1 and r2."
   },
 
   "claim": "At this instrument's envelope -- f_s = 520 Hz, t_exp = 0.45 ms, T_obs = 5 s of held bead per rung, localisation noise epsilon = 10 nm -- the per-realisation relative error on the PSD-recovered f_c of a SINGLE trapped bead is at or below 3 %, and what binds it is the observation length rather than the samples-per-relaxation-time convention. If that holds, 520 fps is sufficient for this run and the 2*pi disagreement of r2's finding 1 is a naming difference rather than a design constraint.",
@@ -142,8 +143,9 @@
   "derived_from": [
     { "ref": "bd:runs/trap-2d-5um__a5ef4f45d589", "hash": "sha256:09913b52a633d7f9",
       "note": "The archived production run r2 answered from. Its 1.17 % on f_c is the ensemble figure this round asks to have replaced by a per-realisation one." },
-    { "ref": "am:kb/external/bd/trap-stiffness-recovery.r2.md", "hash": "sha256:e0538d6abe19ccf6",
-      "note": "Where r2 landed in this repository: kb/external/bd/, evidence_class simulated, may_be_gate_threshold false. Its frontmatter carries two keys the bridge schema does not have (question, date) because knowledge/index.py requires them of every indexed entry; the body is a mechanical copy. Adding both keys to kb_external_entry.schema.json is proposed, not done." }
+    { "ref": "am:kb/external/bd/trap-stiffness-recovery.r2.md", "hash": "sha256:238eb5516877f4ab",
+      "rev": "f8ecc18",
+      "note": "Where r2 landed in this repository: kb/external/bd/, evidence_class simulated, may_be_gate_threshold false. The body is a mechanical copy of r2's kb_entry_for_am.md; the frontmatter additionally carries `question` and `date` because knowledge/index.py requires both of everything it indexes. Those two keys were proposed rather than edited in, and kb_external_entry.schema.json accepted them as optional -- so the landed copy no longer departs from the wire schema, though it is not byte-identical to the bridge copy and does not claim to be." }
   ],
   "confirmed_by": null
 }

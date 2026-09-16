@@ -1,9 +1,9 @@
 {
   "_comment": "Hashes of the upstream artefacts every bridge document cites. Truncated to 16 hex, which is what the schema's pattern allows. Regenerate with tools/rehash.sh; a mismatch is rule R6 and it means an import is stale, not that the file is wrong.",
-  "_am_note": "A sender's own plan changes between rounds -- that is the round working. The unsuffixed plan key is the r1-era file that r1 and r2 both cite and must keep verifying; '@r<N>' pins the revision a later round was distilled from. One key per round, added by the owning side, nothing overwritten. Proposed as a convention (README/schema unchanged, ownership rule).",
+  "_am_note": "A sender's own plan changes between rounds -- that is the round working -- and this file holds one value per key. The unsuffixed plan key is the r1-era file (rev 9f971a8) that r1 and r2 both cite and must keep verifying; '@r<N>' is a second key for the revision a later round was distilled from (rev 35575cb). One key per round, added by the owning side, nothing overwritten. This is not a substitute for the `rev` field the README now requires on a ref: `rev` says which revision a ref means, the suffixed key is what lets R6 check two of them.",
   "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md": "sha256:58cfc405231a2970",
   "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md@r3": "sha256:514da4a0c550b783",
-  "am:kb/external/bd/trap-stiffness-recovery.r2.md": "sha256:e0538d6abe19ccf6",
+  "am:kb/external/bd/trap-stiffness-recovery.r2.md": "sha256:238eb5516877f4ab",
   "bd:runs/trap-2d-5um__a5ef4f45d589": "sha256:09913b52a633d7f9",
   "bd:intake/trap-2d-5um/system.yaml": "sha256:878915718bb9b548",
   "bd:intake/trap-2d-5um/goal.yaml": "sha256:b987e1ee911efd9a",
