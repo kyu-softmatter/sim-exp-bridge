@@ -393,10 +393,21 @@ either peer. Not doubt about the physics — a plan whose provenance chain reads
 
 - **Operator consent does not relay either.** The bridge owner passed on an
   operator ruling, and the BD session went to its own user for it instead of
-  acting — correctly. Same rule one step over: a permission has to arrive from
-  the person whose lab it is, and a peer reporting that consent exists is not
-  the consent. It then laid out for that user exactly what publishing exposed
-  before asking, which is what makes the answer informed rather than assumed.
+  acting — correctly. The reason is a property of the **channel**, not of
+  anyone's reliability: a relayer cannot distinguish "the operator said yes"
+  from "the operator was asked something slightly different", and the cost of
+  being wrong is asymmetric. So the relay cannot carry authority however
+  trustworthy the relayer is. It then laid out for its user exactly what
+  publishing exposed before asking, which is what makes the answer informed
+  rather than assumed.
+
+  **And this rule states its own limitation, because it has to.** It is
+  `confirmed_by` being human-only, one layer out — but R7 can enforce the inner
+  case, since a machine name in a file is detectable, while the outer case has
+  no file to inspect. It can only ever be a convention. Every finding in this
+  document says an unenforced convention decays, so this one is written down
+  knowing that is its likeliest end, and the mitigation is that it is short
+  enough to re-read.
 
 The bridge owner is not exempt. Writing down why a rule changed is coordination;
 moving the thread's physics into a message is a bypass.
