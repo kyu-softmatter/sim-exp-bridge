@@ -54,8 +54,8 @@
         {
           "ref": "bd:verify/verify_ladder_tolerance.py",
           "hash": "sha256:cd6bc109253678ad",
-          "rev": "07d1048",
-          "note": "r7's inverse: sigma_gamma_max by direct propagation"
+          "rev": "f952f18",
+          "note": "r7's inverse: sigma_gamma_max by direct propagation [rev corrected 2026-09-16: cited 07d1048, where this file did not yet exist. The content hash was always right; the revision resolved to nothing. Committed at f952f18.]"
         }
       ]
     },
@@ -368,8 +368,8 @@
     {
       "ref": "bd:verify/verify_ladder_tolerance.py",
       "hash": "sha256:cd6bc109253678ad",
-      "rev": "07d1048",
-      "note": "r7's inverse: sigma_gamma_max by direct propagation"
+      "rev": "f952f18",
+      "note": "r7's inverse: sigma_gamma_max by direct propagation [rev corrected 2026-09-16: cited 07d1048, where this file did not yet exist. The content hash was always right; the revision resolved to nothing. Committed at f952f18.]"
     },
     {
       "ref": "bd:verify/verify_drag_hoomd_crosscheck.py",

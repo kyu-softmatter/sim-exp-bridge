@@ -25,7 +25,7 @@
   "_bd_note": "bd: keys are added by the BD session. verify/ entries are at rev 07d1048 on branch microscope-link-survey, not on BD's main; every ref carries `rev`. The r2 key is UNSUFFIXED at the revision r4 and AM's r4 import cite, and '@r8' is the revision after 4652273 added gaps[].kind. Refreshing the unsuffixed key instead was tried and CASCADED: r4 then had to be refreshed, which broke r5 and r7, which cite r4. A sealed document's citation must not move because a later commit added metadata upstream -- that is what the suffixed-key convention is for.",
   "bd:bridge/threads/trap-stiffness-recovery/r4/ask_experiment.json": "sha256:1099538c29c594bc",
   "bd:bridge/threads/trap-stiffness-recovery/r5/ask_experiment.json": "sha256:4ac1cf0d7d2f2a3e",
-  "bd:bridge/threads/trap-stiffness-recovery/r8/ask_experiment.json": "sha256:3c85ed0bd802d8b2",
+  "bd:bridge/threads/trap-stiffness-recovery/r8/ask_experiment.json": "sha256:211dee87d4bd5843",
   "bd:verify/verify_drag_ladder.py": "sha256:fdd1dae3588398a9",
   "bd:verify/verify_ladder_tolerance.py": "sha256:cd6bc109253678ad",
   "bd:verify/verify_drag_hoomd_crosscheck.py": "sha256:d6cf41dd55213fc4",
