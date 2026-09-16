@@ -122,7 +122,7 @@
           "items": {
             "$ref": "common.defs.json#/$defs/ref"
           },
-          "description": "Ancestry of THIS number. Required for the cycle check (validator rule R5)."
+          "description": "Ancestry of THIS number, for human audit. NOT machine-enforced -- the automatic circular-evidence check (R5) works off `requirements[].basis_refs`, and R5b works off this quantity's `origin`. Earlier revisions of this file claimed R5 required it while validate.py never read it; that claim was false and is withdrawn. Fill it in where the ancestry is not obvious from `origin` alone."
         }
       }
     },
@@ -369,6 +369,10 @@
         "string",
         "null"
       ]
+    },
+    "assumptions_resolved": {
+      "type": "boolean",
+      "description": "Whether every entry in `assumptions[]` is `shared` or `differs`. Separate from `status` on purpose: `status` says where a document is in its lifecycle, this says whether its assumptions are all declared, and the two are independent. Conflating them made a correcting document unable to raise a newly-found unknown without demoting itself to a draft -- which pushed content out of `assumptions[]`, the one block that is not a number. Optional for back-compatibility: R4 accepts `status: draft` on its own as the older way of saying the same thing."
     }
   }
 }

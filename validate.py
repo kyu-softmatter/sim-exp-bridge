@@ -92,6 +92,14 @@ class Report:
 
 
 # ---------------------------------------------------------------- R1: schema
+#: True while --selftest runs. A skipped rule is not a passed rule, so under the
+#: CI entry point a missing dependency is an error rather than a warning. BD's
+#: simulation_bot interpreter has no jsonschema, and `--selftest` there printed
+#: "selftest clean" with R1 never having run -- a checker reporting clean with a
+#: rule switched off is the exact failure both repositories keep writing down.
+STRICT = False
+
+
 def r1_schema(doc: dict, rep: Report) -> None:
     name = SCHEMA_FOR.get(doc.get("schema"))
     if name is None:
@@ -102,7 +110,10 @@ def r1_schema(doc: dict, rep: Report) -> None:
         from jsonschema import Draft202012Validator
         from referencing import Registry, Resource
     except ImportError:  # pragma: no cover
-        rep.warn("R1", "jsonschema not installed -- shape unchecked")
+        (rep.err if STRICT else rep.warn)(
+            "R1", f"jsonschema/referencing not importable under {sys.executable} "
+                  "-- the shape rule did not run. Install them, or run this with an "
+                  "interpreter that has them; do not read the absence as a pass.")
         return
 
     registry = Registry()
@@ -149,17 +160,43 @@ def r3_primitives(doc: dict, rep: Report) -> None:
 
 # ------------------------------------------------- R4: unknown keeps it a draft
 def r4_draft(doc: dict, rep: Report) -> None:
+    """An unresolved assumption has to be declared as unresolved.
+
+    Not "the document must be a draft". Those are different claims, and
+    conflating them broke a correction: `supersedes_prior` exists so a fix does
+    not wait, and requiring `draft` alongside it meant a correcting document
+    could not also raise a newly-found unknown. BD hit this in r4 and moved the
+    item into `findings[]` rather than weaken it -- which files an undeclared
+    assumption as a disagreement, and R4 exists because those are not the same
+    thing.
+
+    So either form satisfies this rule: `assumptions_resolved: false`, which
+    works with any status, or the older `status: draft` on its own.
+    """
     unknown = [a["name"] for a in doc.get("assumptions", [])
                if a.get("status") == "unknown"]
     status = doc.get("status")
-    if unknown and status != "draft":
-        rep.err("R4", f"status is {status!r} but {len(unknown)} assumption(s) are "
-                      f"still unknown: {', '.join(unknown)}. An unresolved "
-                      "assumption is not a small gap -- it is the one class of "
-                      "difference no number reveals.")
-    if not unknown and status == "draft":
-        rep.warn("R4", "every assumption is resolved; status may leave draft "
-                       "once a human sets confirmed_by.")
+    resolved = doc.get("assumptions_resolved")
+
+    if unknown:
+        declared = resolved is False or status == "draft"
+        if not declared:
+            rep.err("R4", f"{len(unknown)} assumption(s) are still unknown "
+                          f"({', '.join(unknown)}) but the document declares neither "
+                          "`assumptions_resolved: false` nor `status: draft`. An "
+                          "unresolved assumption is the one class of difference no "
+                          "number reveals.")
+        elif resolved is not False and status == "draft":
+            rep.warn("R4", "unknowns are declared only through `status: draft`. "
+                           "Prefer `assumptions_resolved: false`, which survives a "
+                           "later status change.")
+    else:
+        if resolved is False:
+            rep.err("R4", "`assumptions_resolved: false` but every assumption is "
+                          "shared or differs. The flag is the claim, not decoration.")
+        if status == "draft":
+            rep.warn("R4", "every assumption is resolved; status may leave draft "
+                           "once a human sets confirmed_by.")
 
 
 # --------------------------------------------------------- R5: circular evidence
@@ -194,6 +231,51 @@ def r5_circular(doc: dict, rep: Report) -> None:
             rep.warn("R5", f"requirements[{i}] ({sym}) echoes {consumer}'s own "
                            f"number ({own[0]}) -- round-trip, soft, so allowed. "
                            "Confirm it is declared in gaps[].")
+
+
+def r5b_round_trip_labels(doc: dict, rep: Report) -> None:
+    """A number the consumer produced must say so in `evidence`.
+
+    R5 catches a *requirement* resting on the consumer's number. This catches the
+    quantity itself: r2 carries `gamma_corr` with `origin: am`, honestly described
+    in prose as "your assumption arithmetic", but tagged `evidence: assumed` --
+    so only a reader of the prose learns it came home. `round_trip` exists for
+    exactly this and nothing used it.
+
+    `parsed_back.received` is exempt and must stay exempt: it exists to echo the
+    consumer's numbers back in the consumer's own `evidence`, so that the
+    consumer can check the round-trip. Relabelling those `round_trip` would
+    destroy the block's only purpose. The rule is about a consumer-origin number
+    sitting somewhere it could be read as the producer's own.
+
+    A warning, not an error: the documents this fires on are not wrong, they are
+    under-labelled, and they belong to the other side.
+    """
+    consumer = CONSUMER.get(doc.get("direction", ""))
+    if consumer is None:
+        return
+
+    EXEMPT = ".parsed_back.received"
+
+    def walk(node, where):
+        if where.startswith(EXEMPT):
+            return
+        if isinstance(node, dict):
+            if node.get("origin") == consumer and "evidence" in node:
+                if node["evidence"] != "round_trip":
+                    rep.warn("R5b", f"{where} ({node.get('symbol')}) has "
+                                    f"origin: {consumer} -- the consumer's own "
+                                    f"number -- but evidence: {node['evidence']!r}. "
+                                    "`round_trip` is the label for a value that came "
+                                    "home; prose in `source` does not reach a reader "
+                                    "who only parses the JSON.")
+            for k, v in node.items():
+                walk(v, f"{where}.{k}")
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                walk(v, f"{where}[{i}]")
+
+    walk(doc, "")
 
 
 # -------------------------------------------------------------- R6: hash drift
@@ -333,6 +415,7 @@ def validate(path: Path, manifest: dict | None) -> Report:
     r3_primitives(doc, rep)
     r4_draft(doc, rep)
     r5_circular(doc, rep)
+    r5b_round_trip_labels(doc, rep)
     r6_hashes(doc, rep, manifest)
     r7_confirmed_by(doc, rep)
     return rep
@@ -340,12 +423,16 @@ def validate(path: Path, manifest: dict | None) -> Report:
 
 def selftest() -> int:
     """A rule nobody can see fail is a rule that has quietly stopped existing."""
+    global STRICT
+    STRICT = True
+    print(f"interpreter: {sys.executable}")
     mf = ROOT / "hashes.json"
     manifest = json.loads(mf.read_text()) if mf.exists() else None
     bad = 0
 
     for p in sorted(ROOT.glob("threads/**/ask_*.json")) + \
-            sorted(ROOT.glob("threads/**/kb_entry_for_*.md")):
+            sorted(ROOT.glob("threads/**/kb_entry_for_*.md")) + \
+            sorted(ROOT.glob("fixtures/valid/*.json")):
         rep = (validate_kb_entry if p.suffix == ".md" else validate)(p, manifest)
         if rep.ok:
             print(f"ok    {p.relative_to(ROOT)}")
@@ -389,6 +476,7 @@ def main() -> int:
     if args.all or not paths:
         paths = sorted(ROOT.glob("threads/**/ask_*.json")) + \
                 sorted(ROOT.glob("threads/**/kb_entry_for_*.md")) + \
+                sorted(ROOT.glob("fixtures/valid/*.json")) + \
                 sorted(ROOT.glob("fixtures/invalid/*.json"))
 
     if args.selftest:

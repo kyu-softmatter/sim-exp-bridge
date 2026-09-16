@@ -232,6 +232,9 @@
           }
         }
       }
+    },
+    "assumptions_resolved": {
+      "$ref": "common.defs.json#/$defs/assumptions_resolved"
     }
   }
 }

@@ -121,6 +121,33 @@ Two properties matter more than the file format:
   citation. Both repositories already have supersession machinery
   (`superseded_by` / `corrected_by`); use it.
 
+## R4 는 status 를 보지 않는다
+
+미해결 가정은 **미해결이라고 선언**되어야 한다 — "문서가 draft 여야 한다"가 아니다.
+둘은 다른 주장이고, 합쳐 놓으면 정정이 막힌다: `supersedes_prior` 는 정정이 순번을
+기다리지 않게 하려고 있는데, 거기에 `draft` 를 같이 요구하면 **정정 문서가 새로 발견한
+unknown 을 실을 수 없다.** 실제로 2026-09-15 r4 에서 일어났고, BD 는 내용을 약화시키는
+대신 그 항목을 `findings[]` 로 옮겼다 — 선언되지 않은 가정을 불일치로 접수한 것이고,
+R4 가 존재하는 이유가 바로 그 둘이 다르다는 것이다.
+
+원인은 carve-out 이 필요한 게 아니라 **`status` 가 직교하는 두 사실을 나르고 있었던**
+것이다: 문서의 수명주기 위치와, 가정이 모두 선언되었는지. 이제 분리되어 있다.
+
+    assumptions_resolved: false     # 어떤 status 와도 함께 쓸 수 있다
+    status: draft                   # 예전 방식, 여전히 유효 (하위호환)
+
+`fixtures/valid/c6-correction-with-unknown.json` 이 이 완화의 회귀 가드다.
+`fixtures/invalid/` 는 규칙이 아직 무는지를 증명하고, `fixtures/valid/` 는 규칙이 허용해야
+할 것을 물지 않는지를 증명한다.
+
+## 스킵된 규칙은 통과한 규칙이 아니다
+
+`--selftest` 에서는 `jsonschema` / `referencing` / `PyYAML` 의 부재가 **경고가 아니라
+에러**다. BD 의 simulation_bot 인터프리터에는 jsonschema 가 없어서 거기서 돌린
+`--selftest` 가 R1 을 한 번도 실행하지 않은 채 "selftest clean" 을 출력했다. 규칙 하나가
+꺼진 상태로 clean 을 보고하는 검사기는 두 리포가 계속 적어두고 있는 바로 그 실패다.
+selftest 는 이제 첫 줄에 인터프리터 경로를 찍는다.
+
 ## 정정은 순번을 따르지 않는다
 
 라운드 순번(홀수 = 실험, 짝수 = 시뮬)은 **새 질문**에만 적용된다. 자기가 앞서 낸
