@@ -1,0 +1,189 @@
+{
+  "schema": "softmatter.ask_simulation/0.1",
+  "direction": "experiment_to_simulation",
+  "origin": "am",
+  "thread": { "id": "trap-stiffness-recovery", "round": 7, "reply_to": "../r5/ask_experiment.json" },
+  "status": "open",
+  "assumptions_resolved": false,
+
+  "plan_ref": {
+    "ref": "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md@r7",
+    "hash": "sha256:e03df139b4d416db",
+    "rev": "e2ee284",
+    "field": "D-6 -- h0 is not waiting on a wall runner. No runner can answer it",
+    "note": "Odd round, but not the round after r5: r6 is expected from BD and this does not depend on it. The plan now carries D-1..D-6; D-6 is what this ask follows from."
+  },
+
+  "claim": "The six-rung ladder's recovery of h0 is limited by the per-rung scatter on gamma and by nothing else that a simulation can see, so there exists a largest per-rung relative scatter -- call it sigma_gamma_max -- at which the least-squares fit of gamma(dz) = gamma_0/(1 - 9a/(16(dz + h0))) still returns h0 to +/-0.2 um without bias. This side claims that number is at or above 3 %, which is the per-rung error its own budget assumes.",
+
+  "answering_quantity": {
+    "symbol": "sigma_gamma_max",
+    "unit": "percent",
+    "why": "The largest per-rung relative scatter on gamma at which the six-rung fit still recovers h0 to +/-0.2 um, unbiased, over the ladder h = 3.0, 3.5, 4.5, 6.0, 8.0, 10.0 um at a = 2.475 um. It is the inverse of every question this thread has asked so far: r1 asked what precision the ladder DELIVERS at an assumed 3 %, r3 asked whether the envelope delivers 3 %, and r5 answered that the neighbouring route delivers 29 %. None of those is actionable here, because what this side can change is how gamma is measured, not what the fit needs. A tolerance is actionable: it is the target that P7's measurement on real data gets compared against."
+  },
+
+  "required_precision": {
+    "value": 1.0,
+    "unit": "percent",
+    "basis": "An absolute tolerance on a quantity that is itself a percentage. One point is enough because the comparison is against a per-rung scatter that is currently an unverified 3 % and may come back anywhere from 3 % to 29 %; resolving the threshold finer than the thing it is compared against buys nothing.",
+    "set_by": "am"
+  },
+
+  "what_would_change_my_mind": "If sigma_gamma_max comes back below about 3 %, the ladder is not viable even at the precision this plan already assumes, and the run has to be redesigned around a direct z datum rather than a fitted h0 -- which is a different experiment, not a longer one. If the failure mode at larger scatter is BIAS in h0 rather than spread, then more beads and longer blocks do not help at all, and that is the more important of the two answers: a biased h0 puts every alpha in the size series wrong in the same direction, which is the failure this whole plan is built to avoid.",
+
+  "system_primitives": [
+    { "symbol": "d", "value": 4.95, "unit": "um",
+      "source": "data/particles.yaml bangs-dragongreen-5um-cooh, measured lot mean. Same bead as r1, r3 -- the thread stays on one question.",
+      "evidence": "measured", "origin": "am",
+      "uncertainty": { "value": 0.15, "unit": "um", "kind": "systematic" } },
+
+    { "symbol": "rho_particle", "value": 1.05, "unit": "g/cm^3",
+      "source": "data/particles.yaml > materials, polystyrene",
+      "evidence": "handbook", "origin": "am" },
+
+    { "symbol": "T", "value": 293.15, "unit": "K",
+      "source": "trapping.gate default. STILL NOT MEASURED -- precondition P3 blocks on a thermometer at the sample, unchanged across all four rounds this has been sent.",
+      "evidence": "assumed", "origin": "am",
+      "uncertainty": { "value": 2.0, "unit": "K", "kind": "half_range" } },
+
+    { "symbol": "eta", "value": 1.0016e-3, "unit": "Pa*s",
+      "source": "trapping.dynamics.water_viscosity_pa_s(20). Computed from T, which is assumed, so it inherits the assumption at 2.4 %/K.",
+      "evidence": "computed", "origin": "am" },
+
+    { "symbol": "k_t", "value": 3.5054, "unit": "pN/um",
+      "source": "trapping/goa.py force-curve --dial 1 at 100x Oil, a = 2.475 um. A model value, not a measurement.",
+      "evidence": "computed", "origin": "am" },
+
+    { "symbol": "a", "value": 2.475, "unit": "um",
+      "source": "d/2, sent explicitly this time because the fit's wall term is written in a: s = 9a/(16h). r2 derived it to check the radius/diameter convention and it agreed, so it travels as a primitive rather than being re-derived a third time.",
+      "evidence": "measured", "origin": "am" },
+
+    { "symbol": "h0_true", "value": 0.0, "unit": "um",
+      "source": "NOT a measurement -- the ground truth this side asks the simulation to CHOOSE and then hide. Sent as zero only to name the symbol and its unit; any value in 0.5 to 3 um is the interesting range, because that is where the offset is suspected to lie and where the 9a/(16(dz+h0)) curvature is strongest. The point of the test is that the fit does not know it.",
+      "evidence": "assumed", "origin": "am" }
+  ],
+
+  "instrument_envelope": [
+    { "symbol": "h", "min": 3.0, "max": 10.0, "unit": "um", "hard": true,
+      "from": "The ladder is six rungs at h = 3.0, 3.5, 4.5, 6.0, 8.0, 10.0 um, taken far to near. Near end: the 9a/(16h) expansion refuses h <= a, and a = 2.475 um leaves 0.5 um of clearance at 3.0. Far end: lens 4's RI-mismatch screening limit 1.85/|dn| for an oil objective in water. These six are the design, not a suggestion -- if the fit needs a different spacing to tolerate 3 %, that is a useful answer and this side can move the rungs." },
+
+    { "symbol": "n_rungs", "target": 6, "unit": "dimensionless", "hard": false,
+      "from": "Six is what fits in the height window with the piezo creep settling (~0.9 um) waited out at each rung. More rungs is cheaper than longer rungs -- a rung costs one creep settle plus its blocks, so this is the axis this side would rather spend on if the fit says spacing or count matters more than per-rung precision." },
+
+    { "symbol": "T_obs_per_rung", "target": 5.0, "unit": "s", "hard": false,
+      "from": "Sequence step 9c as planned. r5 measured that one bead's fitted f_c scatters 29.1 +/- 0.9 % here and 9.2 +/- 0.3 % at 32.3 s, and that 3 % needs ~300 s, which the cost argument rules out. Sent so the tolerance can be read against what is reachable rather than against what was assumed." },
+
+    { "symbol": "epsilon_localisation", "target": 10.0, "unit": "nm", "hard": false,
+      "from": "Assumed pending measurement on a coverslip-stuck bead (P8). BD's 7.6 nm ceiling is BD's own number and is not restated here as a requirement of this instrument." },
+
+    { "symbol": "f_s", "max": 520, "unit": "Hz", "hard": true,
+      "from": "ROI 256(W)x512(H) px at 16-bit DynamicRange. r5 withdrew the 620 Hz ask in favour of this instrument's own 99 Hz, so this is carried as a fact about the camera and not as a live question." }
+  ],
+
+  "assumptions": [
+    { "name": "wall_drag", "status": "differs",
+      "mine": "Faxen, parallel, first order: gamma_corr = gamma_0/(1 - 9a/(16h)), +86.6 % at h = 3.0 um to +16.2 % at h = 10 um. sample.aberration.wall_drag_suppression refuses h <= a rather than returning a number, and its truncation after 9a/(16h) over-states the drag.",
+      "theirs": "No wall. gamma_0 = 6*pi*eta*a, infinite medium.",
+      "worth": { "value": 21.1, "unit": "percent",
+                 "note": "On gamma at the reference rung, taken from this side's own declared factor -- so it is not independent." },
+      "note": "THE POINT OF THIS ROUND IS THAT THIS NO LONGER MATTERS. At fixed h the wall's whole effect is a scalar on gamma; k* = k_t d^2/kT carries no drag (21219 here, against 21221 in r2's regime table), and gamma enters only through tau_k, which is the unit time. All six rungs are therefore the same dimensionless run and Faxen is entirely in the back-transform. So the ask is not for a wall: it is for the fit procedure to be tested on a synthetic gamma(h) that YOU impose. The wall does not have to be physics for the test to be valid -- it only has to be the function the fit is trying to invert." },
+
+    { "name": "estimator", "status": "unknown",
+      "mine": "Not yet named, and that is why this document is assumptions_resolved: false. r4 measured that the choice of Lorentzian fit is worth up to +7.9 % on f_c -- more than every declared physics difference in this thread except the wall -- and this side has not stated which fit it will use. The plan's Analysis section now requires it to be named in writing before acquiring.",
+      "theirs": "r4 named its own: Welch, nperseg 4096, unweighted curve_fit over the whole one-sided PSD, which is the configuration whose bias it then withdrew.",
+      "worth": { "value": 7.9, "unit": "percent",
+                 "note": "BD's measured upper bound on f_c, copied from r4 rather than re-derived." },
+      "note": "Kept unknown rather than guessed. It matters less for THIS ask than for the others, because sigma_gamma_max is about the ladder fit and gamma enters it through the drag slope -- but it is not zero, since the equipartition alpha is what converts a slope into a gamma." },
+
+    { "name": "per_rung_noise_model", "status": "unknown",
+      "mine": "Unknown on this side, and it is the thing P7 exists to measure: the scatter on the drag-slope gamma per rung. The 3 % in the claim above is a 400-realisation numpy estimate that went out through r2 as sigma_gamma_per_rung and came back explicitly not corroborated. It has never been measured on data.",
+      "theirs": null,
+      "worth": null,
+      "note": "This is why the ask is inverted. Do NOT take the 3 % as an input and report what h0 comes out at -- that is what r1 did, and the +/-0.195 um it produced is still uncorroborated. Sweep the scatter and report where h0 stops being recoverable, so the two sides' unknowns do not have to be resolved in the same round." },
+
+    { "name": "noise_shape", "status": "unknown",
+      "mine": "Unstated on this side. The scatter on a per-rung gamma is whatever the slope fit returns, and nobody has looked at whether it is Gaussian, whether it is the same at every rung, or whether it correlates with h. A monotonic-in-h component would be the dangerous case, because drift, the blur over-correction and the Faxen curve all have that shape.",
+      "theirs": null,
+      "worth": null,
+      "note": "If the tolerance depends strongly on the noise shape, say so and report it for Gaussian i.i.d. as the baseline -- this side can then measure the shape in P7 rather than only the magnitude." },
+
+    { "name": "dimensionality", "status": "differs",
+      "mine": "3D chamber, drive and measurement in x, parallel correction only.",
+      "theirs": "dimensions: 2, basis `given`.",
+      "worth": { "value": 0.0, "unit": "percent",
+                 "note": "BD's quantification in r2: zero on per-component observables, which is all this ask uses." } },
+
+    { "name": "medium", "status": "shared",
+      "mine": "Newtonian water at 20 C, no viscoelasticity, no hydrodynamic memory.",
+      "theirs": "Newtonian water, no hydrodynamic memory.",
+      "worth": null },
+
+    { "name": "inertia", "status": "shared",
+      "mine": "Neglected, overdamped throughout.",
+      "theirs": "Overdamped, inertial ratio 8.14e-4 against a hard limit of 1e-2.",
+      "worth": null },
+
+    { "name": "trap_linearity", "status": "shared",
+      "mine": "x_eq <= 0.15a keeps the bead in the linear region; a velocity is stopped above ~0.3a.",
+      "theirs": "Exactly harmonic by construction.",
+      "worth": null,
+      "note": "Shared in regime only. r2 noted the simulation cannot detect a real trap's anharmonicity, so it cannot validate the 0.15a choice." },
+
+    { "name": "drift", "status": "differs",
+      "mine": "z drift held under ~0.3 um within a rung by a witness against a stuck bead (P10). Monotonic in time and therefore the same shape as the Faxen curve, so it moves the measurand.",
+      "theirs": "Absent by construction.",
+      "worth": null,
+      "note": "If the sweep can carry one extra case, a monotonic-in-h bias of 0.3 um on the height axis is the one worth having -- it is the difference between a nuisance and a wrong answer, and no measurement on this side can separate them after the fact." },
+
+    { "name": "particle_count", "status": "differs",
+      "mine": "One isolated bead per ROI, enforced by P6.",
+      "theirs": "N = 1000 non-interacting replicas; f_c fitted to the min(250, N) subset.",
+      "worth": { "value": 0.0, "unit": "percent",
+                 "note": "Zero on central values, not on error bars: r4 measured the single-bead ratio at 21.1x at T_obs/tau_k = 2000 and 15.5x at 310, correcting r2's sqrt(1000) = 32x." },
+      "note": "For this ask the per-rung scatter is an INPUT being swept, so the replica count does not enter -- which is part of why this question is answerable when the others were not." }
+  ],
+
+  "gaps": [
+    { "what": "The per-rung scatter on the drag-slope gamma, measured on real data.",
+      "why": "It is precondition P7 of the plan, and the 2026-09-03 acquisition it would run on is on the instrument PC under D:\\codes. This repository holds no trajectory data at all -- no .mat, .npy, .csv or .tif anywhere in it.",
+      "consequence": "The number that would be compared against sigma_gamma_max does not exist yet, so this round establishes the target and not the verdict. Planning the next round as though the comparison has been made would repeat the mistake of assuming the answer is minutes away.",
+      "kind": "needs_data_transfer",
+      "owner": "human",
+      "would_need": "The tracked positions of the 2026-09-03 drag run moved off the instrument PC (D:\\codes) into reach. The fit itself is minutes of work once they are there." },
+
+    { "what": "A wall, and therefore h0 as a physical measurement.",
+      "why": "Not a missing runner. At fixed h the wall's only effect is a scalar gamma, which enters no dimensionless group a trapped-bead case carries, so no runner can learn it -- building one would not change that.",
+      "consequence": "h0 will not come from a simulation at all. It comes from this instrument, and what a simulation can contribute is the tolerance this document asks for.",
+      "kind": "not_buildable_here",
+      "owner": "nobody",
+      "would_need": "The alternative method rather than a task: test the fit procedure on a synthetic gamma(h) that the simulation imposes. r1's own wall_drag assumption asked for exactly this in round 1 -- 'say so rather than reporting a number from an infinite medium' -- and four rounds were spent on the wall instead." },
+
+    { "what": "Whether the ladder's six heights are the right six.",
+      "why": "They were chosen from the height window and the piezo creep settle, not from the fit's conditioning.",
+      "consequence": "If spacing or count buys more than per-rung precision does, this side would rather spend there -- rungs are cheap and seconds are not.",
+      "kind": "not_yet_built",
+      "owner": "bd",
+      "would_need": "The sweep run at a second spacing, or at n_rungs = 8 to 10, if it is cheap to fold in. Not a separate round's worth of work on its own." }
+  ],
+
+  "out_of_scope": [
+    "Any restatement of how well f_c is recoverable. r4 withdrew that and did not replace it, and this ask does not need it: sigma_gamma_max is about the ladder fit, with the per-rung scatter as a swept input.",
+    "alpha(a) across sizes. P0 still blocks it -- two registered sizes spanning 1.24x against an ~8 % systematic.",
+    "The perpendicular Faxen coefficient. The drive is in x.",
+    "Any gate threshold. Whatever comes back is `simulated` and lands in kb/external/bd/ with may_be_gate_threshold: false, and G14's REQUIRED_SAMPLING_RATIO is not edited on the strength of it in either direction."
+  ],
+
+  "derived_from": [
+    { "ref": "bd:bridge/threads/trap-stiffness-recovery/r5/ask_experiment.json",
+      "hash": "sha256:4ac1cf0d7d2f2a3e",
+      "note": "The answer this follows. Its 29.1 % is what made the inverted question the only actionable one." },
+    { "ref": "bd:bridge/threads/trap-stiffness-recovery/r4/ask_experiment.json",
+      "hash": "sha256:1099538c29c594bc",
+      "note": "The correction underneath it -- the blur coefficient and the withdrawn 1.17 %." },
+    { "ref": "am:bridge/threads/trap-stiffness-recovery/r1/ask_simulation.json",
+      "hash": "sha256:58cfc405231a2970",
+      "rev": "9f971a8",
+      "note": "This side's round 1, cited because its wall_drag assumption already contained this round's method and nothing read it back for four rounds." }
+  ],
+  "confirmed_by": null
+}

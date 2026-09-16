@@ -7,6 +7,7 @@
   "am:kb/external/bd/trap-stiffness-recovery.r2.md@r4": "sha256:0ef7992f486c9c07",
   "am:kb/external/bd/trap-stiffness-recovery.r5.md": "sha256:bb8f69dabc1936af",
   "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md@r5": "sha256:f4fa761da6f44211",
+  "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md@r7": "sha256:e03df139b4d416db",
   "bd:runs/trap-2d-5um__a5ef4f45d589": "sha256:09913b52a633d7f9",
   "bd:intake/trap-2d-5um/system.yaml": "sha256:878915718bb9b548",
   "bd:intake/trap-2d-5um/goal.yaml": "sha256:b987e1ee911efd9a",
