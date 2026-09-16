@@ -336,6 +336,16 @@ two patterns aimed at its newest code, and the `unread` status exists because
 without PyYAML every `.md` citation would drop out of the run and the summary
 would still read clean.
 
+**The resolver prints which checkout it opened, because `absent` is a branch
+before it is anything else.** Pointing `--root am` at this repository's default
+worktree rather than at its worktree branch turns six real citations into six
+false errors, and the first run of it here did exactly that. It errs in the safe
+direction — false errors, not a false pass — but nothing in the output said
+which checkout had been opened, so the reader had to remember. Now each root
+prints as `path [branch @ sha]`, and any `absent` count is followed by the
+branch that produced it. Printing the invocation beats remembering it, which is
+the same move as everything else here.
+
 ## A correction does not wait its turn
 
 Round parity (odd = experiment, even = simulation) governs **new questions**

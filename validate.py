@@ -1340,6 +1340,33 @@ def _resolve_checks() -> list[str]:
     return failures
 
 
+def _root_head(path: Path | None) -> str:
+    """Which checkout a root actually is, printed next to the path.
+
+    `absent` means "the path does not exist in that checkout", and the first
+    thing that makes a path absent is the branch. Pointing `--root am` at this
+    repository's default worktree rather than its worktree branch turns six
+    real citations into six false errors, and nothing in the output said which
+    checkout had been opened. It errs safe -- false errors, not a false pass --
+    but a reader still has to know it happened. So the invocation is printed
+    rather than remembered.
+    """
+    if path is None:
+        return ""
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=10)
+        sha = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=10)
+        if head.returncode or sha.returncode:
+            return "  (not a git checkout)"
+        return f"  [{head.stdout.strip()} @ {sha.stdout.strip()}]"
+    except (OSError, subprocess.SubprocessError):  # pragma: no cover
+        return "  (git unavailable)"
+
+
 def run_resolve(roots: dict[str, Path]) -> int:
     """`--resolve`. Opt-in, and it says what it did not check.
 
@@ -1356,7 +1383,9 @@ def run_resolve(roots: dict[str, Path]) -> int:
 
     print(f"resolve: bridge={ROOT}")
     for side in ("am", "bd"):
-        print(f"         {side}={roots.get(side) or '(not configured -- not checked)'}")
+        root = roots.get(side)
+        print(f"         {side}={root or '(not configured -- not checked)'}"
+              f"{_root_head(root)}")
 
     subject = manifest.get("_subject_of", {})
     rows = ([("manifest", *r) for r in resolve_manifest(manifest, roots)] +
@@ -1377,6 +1406,20 @@ def run_resolve(roots: dict[str, Path]) -> int:
     print()
     for status, n in sorted(counts.items()):
         print(f"    {n:>3}  {status:<12} {RESOLVE_STATUSES[status]}")
+
+    # `absent` next to the branch that produced it, because the branch is the
+    # first candidate and the output otherwise makes it look like data loss.
+    absent_sides: dict[str, int] = {}
+    for _kind, what, status, _detail in rows:
+        if status == "absent":
+            side = str(what).split(":", 1)[0].split()[-1]
+            absent_sides[side] = absent_sides.get(side, 0) + 1
+    for side, n in sorted(absent_sides.items()):
+        root = roots.get(side)
+        print(f"\n    note  {n} `absent` on the {side} side, and that root is"
+              f"{_root_head(root) or ' not a git checkout'}. A path is absent "
+              "because of the branch before it is absent because of anything "
+              "else -- check the checkout before reading these as data loss.")
 
     checked = sum(n for s, n in counts.items() if s not in ("no_root", "no_rev"))
     errors = sum(n for s, n in counts.items() if s in RESOLVE_ERRORS)
