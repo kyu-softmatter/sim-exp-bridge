@@ -16,6 +16,8 @@ repositories.
 ```bash
 python3 validate.py --selftest      # CI entry point: the rules still bite
 python3 validate.py --all           # every document, warnings included
+python3 validate.py --resolve \
+    --root am=PATH --root bd=PATH   # open the files the citations name
 ```
 
 Most of this file is the record of what the exercise cost. If you are here for
@@ -113,6 +115,7 @@ copy.
 | R5 | a **hard** requirement may not rest on the consumer's own number | circular evidence: three rounds and both KBs agree with nothing measured twice |
 | R5b | a consumer-origin quantity carries `evidence: round_trip` | a value that came home being invisible to anything parsing the JSON |
 | R6 | cited hashes match a registered revision | a stale import after upstream was corrected |
+| R6 `--resolve` | …and that revision is a real file: every registered key against the working tree, every cited `rev` against the blob | a `rev` naming a commit where the path does not exist — [two live instances](#the-resolve-branch--r6-opens-the-file) |
 | R7 | `confirmed_by` is never a machine name | the bridge signing off on itself |
 | R8 | a shipped `tier` is reachable from its `evidence` | the sender using the receiver's vocabulary with a different meaning |
 | R9 | a `simulated` entry is not in a `calibrations` namespace | a path that asserts a measurement that never happened |
@@ -249,14 +252,89 @@ at nothing — BD's r8 cited an uncommitted file at `rev: 07d1048`, **with the
 content hash correct throughout**. The field added to prevent that failure had
 it.
 
-And R6 cannot catch it: it checks a recorded hash and **never a file on disk**.
-That division is deliberate — the hash pins content, the `rev` is for a human to
-go look — and the cost has to be stated rather than implied: **`rev` is an
-unverified field.**
+And R6 could not catch it: it checked a recorded hash and **never a file on
+disk**. That division was called deliberate — the hash pins content, the `rev`
+is for a human to go look — and the cost was stated rather than implied:
+**`rev` was an unverified field.**
+
+**CORRECTION (2026-09-16): it is verified now, and the reason the old text was
+wrong is that the correction above was applied by hand.** `813fcf2` fixed the
+dead `rev` in r8's `.json`. The `.md` twin two files away carries the same ref
+at the same dead rev and was **not** fixed, because nothing could see it. That
+is the second instance, it was sitting in the tree while the first was being
+repaired, and two instances is this repository's own bar for a rule. See
+[the resolve branch](#the-resolve-branch--r6-opens-the-file) below.
 
 The suffixed-key convention has now absorbed three things that would each have
 cascaded: r2's metadata backfill, r8's hash move, and this `rev` correction. Each
 time the unsuffixed key stayed where existing citations point.
+
+### The resolve branch — R6 opens the file
+
+```bash
+python3 validate.py --resolve --root am=PATH --root bd=PATH
+```
+
+R6 compares a citation against `hashes.json`: **both sides of that comparison
+are strings this repository wrote.** The resolve branch is the missing half —
+it opens the working tree for every registered key, and `git show`s the blob at
+every cited `rev`. Not a fourteenth rule: R6 already claims a hash is the
+identity of an upstream artefact, and an identity that resolves to nothing is
+not one.
+
+On the first run against both clones — 45 resolutions, **two of them
+unresolvable, and both real**:
+
+| | what |
+|---|---|
+| `rev_absent` | `r8/kb_entry_for_am.md` cites `bd:verify/verify_ladder_tolerance.py` at `07d1048`, **where the path does not exist**. Its `.json` twin was corrected in `813fcf2`; this one was not. |
+| `rev_mismatch` | `r4/ask_experiment.json` cites r2 at `rev c288df6` with `hash 683eae8f`. At `c288df6` the blob is `2bbab020`; `683eae8f` is that file at `b96092b`, **four commits later**. The two halves of the citation name different moments, and R6 passed it because the hash is a registered key. |
+
+Neither is repaired here. A cited document is not edited by the side that did
+not write it, and the `.md` fix also moves a hash AM's import registers — the
+owning session does that, which is the same boundary `confirmed_by` draws.
+
+**What it cannot do, stated rather than implied:**
+
+- **`am:`/`bd:` roots are never defaulted.** No sibling-directory guess: the
+  answer must not depend on where somebody cloned. Unconfigured is reported as
+  `no_root` and counted, and a run that resolved *nothing* exits non-zero —
+  "0 checked, 0 failed" is the vacuous pass this repository keeps writing down.
+- **Rootless, it still covers `<side>:bridge/...`** — those paths live here, and
+  that is 11 resolutions with no configuration. The `rev_mismatch` above is one
+  of them, so it is reachable from CI.
+- **8 citations carry no `rev` at all.** They resolve to nothing by
+  construction; `no_rev` counts them instead of calling the run clean.
+- **A directory ref has no recipe.** `bd:runs/trap-2d-5um__a5ef4f45d589` is a
+  directory, and its registered hash is — measured, not documented anywhere —
+  its `metrics.json`. The branch reports `no_recipe` rather than inventing one.
+
+**The first run also produced three defects that were the resolver's own**, and
+that is the part worth keeping: `path@r3` opened as a filename (R13's form, in
+a ref the validator already warns about), `git show` on a directory hashing the
+*tree listing* into a confident `rev_mismatch`, and the one key that
+deliberately holds another artefact's hash reading as a dead rev. Three of six
+"findings" were the checker. They are now cases in the selftest, because the
+hour that separated them from the two real ones is the cost of rediscovering
+them.
+
+That last one is declared in the manifest instead of in prose. `_subject_of`
+maps `am:bridge/.../r1/ask_simulation.json` to AM's plan — r1's ask was
+distilled from it and AM held no separate file — and the proposals file had
+**predicted** that the first regeneration would read the key as a false "moved
+upstream". It was right; this was that regeneration. Redirected rows print even
+when they pass, because a quiet exception is how the prose note got forgotten.
+
+The selftest cannot use the real roots, so it builds a git repository in a temp
+directory and requires **every one of the eleven statuses** to be produced by a
+case — `_coverage_checks` applied to a rule whose input is a filesystem. Seven
+deliberate mutations were checked to turn it red: drop the `rev_absent` branch,
+report `advanced` as ok, make the hash comparison `if True`, stop stripping the
+`@r<N>` key suffix, stop refusing a tree, let an unparseable document pass
+silently, and add a status with no case. The last two are this repository's own
+two patterns aimed at its newest code, and the `unread` status exists because
+without PyYAML every `.md` citation would drop out of the run and the summary
+would still read clean.
 
 ## A correction does not wait its turn
 
@@ -742,9 +820,13 @@ Recorded as trades rather than as claims, at BD's request:
   new gate cannot arrive *unclassified*, but it can arrive *unexercised*. That
   is a weaker guarantee than this repository's, and "source-derived check" reads
   like parity when it is not.
-- **Here: a `rev` is never resolved.** R6 checks a recorded hash and never a file
-  on disk, so a `rev` pointing at nothing is invisible. One instance, so no rule;
-  see Pattern 1 row 5.
+- ~~**Here: a `rev` is never resolved.**~~ **Closed 2026-09-16** by R6's
+  [resolve branch](#the-resolve-branch--r6-opens-the-file), after a second
+  instance appeared — the `.md` twin of the document whose `.json` had just
+  been corrected by hand. What replaces it is smaller and still open: **two
+  real unresolvable citations nobody has repaired**, **8 citations with no
+  `rev`**, **no hashing recipe for a directory ref**, and the branch is **not
+  in CI** even though its rootless half would cover one of the two findings.
 
 ### And the gate was not pointed at the thing it was built for
 
@@ -785,7 +867,7 @@ fixtures/invalid/               one per rule, plus expected.json pinning identit
 fixtures/valid/                 regression guards for deliberate loosenings
 proposals/                      schema change requests from either side
 prompts/                        the request text pasted into each agent session
-hashes.json                     the manifest R6 checks against
+hashes.json                     the manifest R6 checks against, and `_subject_of`
 validate.py                     the thirteen rules
 ```
 

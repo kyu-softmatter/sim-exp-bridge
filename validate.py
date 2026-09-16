@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Validate a bridge document. Seven rules; two of them are not shape rules.
+"""Validate a bridge document. The README table names the rules and is the
+one place that counts them -- this line said "Seven" for six of them ago.
 
     python3 validate.py threads/trap-stiffness-recovery/r1/ask_simulation.json
     python3 validate.py --all
+    python3 validate.py --resolve --root am=PATH --root bd=PATH
 
 JSON Schema covers R1 only. The rules that matter most here -- R3 (send
 primitives, not composites), R4 (an unresolved assumption keeps the document a
@@ -16,7 +18,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -752,6 +757,224 @@ def validate(path: Path, manifest: dict | None) -> Report:
     return rep
 
 
+# --------------------- R6, resolve branch: a cited revision resolves to a file
+#: R6 compares a citation against `hashes.json` and stops there. Both sides of
+#: that comparison are strings this repository wrote, and nothing ever opens the
+#: file -- so a `rev` naming a commit where the path does not exist passes.
+#: `813fcf2` corrected exactly that in r8's JSON; the `.md` twin two files away
+#: carries the same ref at the same dead rev and was not corrected, because
+#: nothing could see it. One instance is an accident. The second one, sitting in
+#: the tree while the first was being fixed by hand, is what promotes this from
+#: a note in the README to a branch of the rule.
+#:
+#: Not a fourteenth rule. R6 already claims a hash is the identity of an
+#: upstream artefact, and an identity that resolves to nothing is not one: this
+#: is the half of R6 that was never written. It needs checkouts of the two agent
+#: repositories, so it cannot run in CI and is opt-in -- `--resolve`. The
+#: selftest exercises the mechanism against a temporary git repository, so every
+#: branch is observably alive even where the real roots are absent.
+RESOLVE_STATUSES = {
+    "ok_worktree":  "the working tree matches a registered revision",
+    "ok_rev":       "the blob at the cited rev hashes to the cited value",
+    "absent":       "the path does not exist in that checkout",
+    "advanced":     "the path exists and matches no registered revision",
+    "no_recipe":    "a directory ref, and nothing says what to hash",
+    "rev_missing":  "the cited rev is not a commit in that checkout",
+    "rev_absent":   "the path does not exist at the cited rev",
+    "rev_mismatch": "the blob at the cited rev is not the cited hash",
+    "no_root":      "no checkout configured for that side -- not checked",
+    "no_rev":       "a path-only citation, so there is no revision to resolve",
+    "unread":       "a document that could not be parsed -- its refs are UNCHECKED",
+}
+#: `advanced` is deliberately not an error: the `@r<N>` convention exists so
+#: that upstream moving past a frozen citation is the normal case. What it buys
+#: is that the move becomes visible at all, and it names the next key to write.
+RESOLVE_ERRORS = {"absent", "rev_missing", "rev_absent", "rev_mismatch", "unread"}
+RESOLVE_WARNINGS = {"advanced", "no_recipe"}
+
+
+def _sha16(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()[:16]
+
+
+def _route(ref: str, roots: dict[str, Path]) -> tuple[Path | None, str]:
+    """`<side>:bridge/...` is this repository -- both sides cite bridge
+    documents and those live here, which is also why r8's `rev 4652273`
+    resolves in no agent repository. Everything else needs that side's
+    checkout, and there is no default: guessing a sibling directory would make
+    the check's answer depend on where somebody cloned."""
+    side, _, path = ref.partition(":")
+    # `path@r3` is a manifest key, not a filename. R13 warns on the documents
+    # that write it; the resolver's first run tried to open the literal string
+    # and reported two of AM's plan citations as missing files, which is a
+    # checker inventing a defect -- worse than the one it was looking for.
+    path = path.split("@")[0]
+    if path.startswith("bridge/"):
+        return ROOT, path[len("bridge/"):]
+    return roots.get(side), path
+
+
+def _git_blob(root: Path, rev: str, path: str) -> tuple[str, bytes | None]:
+    """Kept separate so the caller can tell *no such commit* from *no such file
+    at that commit*. They are different accidents: the first is a citation of
+    work that was never pushed, the second is r8's -- a file that exists now,
+    cited at a revision from before it was written."""
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(root), *args], capture_output=True)
+
+    if git("cat-file", "-e", f"{rev}^{{commit}}").returncode != 0:
+        return "rev_missing", None
+    kind = git("cat-file", "-t", f"{rev}:{path}")
+    if kind.returncode != 0:
+        return "rev_absent", None
+    if kind.stdout.strip() != b"blob":
+        return "no_recipe", None
+    return "ok_rev", git("show", f"{rev}:{path}").stdout
+
+
+def resolve_manifest(manifest: dict, roots: dict[str, Path]) -> list[tuple]:
+    """Every registered key, against the working tree of the side that owns it.
+
+    Keys are grouped by path first: `ref` and `ref@r8` are two revisions of one
+    artefact, and matching any of them is the point of the revision convention.
+
+    `_subject_of` exists because one key is deliberately not the hash of its own
+    path -- `am:bridge/.../r1/ask_simulation.json` holds the *plan's* hash, per
+    r2's note, and the proposals file predicted that the first regeneration
+    would read it as a false 'moved upstream'. It was right; this resolver was
+    the regeneration. A fact that lives only in two prose notes is a fact the
+    next checker trips over, so the manifest now states it.
+    """
+    subject = manifest.get("_subject_of", {})
+    groups: dict[str, dict[str, str]] = {}
+    for key, value in manifest.items():
+        if key.startswith("_"):
+            continue
+        groups.setdefault(key.split("@")[0], {})[key] = value
+
+    rows = []
+    for base, registered in sorted(groups.items()):
+        target = subject.get(base, base)
+        via = "" if target == base else f"  (by `_subject_of` -> {target})"
+        root, rel = _route(target, roots)
+        if root is None:
+            rows.append((base, "no_root", f"{target.split(':')[0]}: has no checkout{via}"))
+            continue
+        path = root / rel
+        if not path.exists():
+            rows.append((base, "absent", f"{rel} is not in {root}{via}"))
+        elif path.is_dir():
+            rows.append((base, "no_recipe", f"{rel} is a directory{via}"))
+        else:
+            found = _sha16(path.read_bytes())
+            hit = [k for k, v in sorted(registered.items()) if v == found]
+            if hit:
+                rows.append((base, "ok_worktree", f"working tree = {hit[0]}{via}"))
+            else:
+                rows.append((base, "advanced",
+                             f"working tree is {found}, which is none of the "
+                             f"{len(registered)} registered revision(s) "
+                             f"({', '.join(sorted(registered))}){via}. Register "
+                             f"this one as {base}@r<N> before citing it; do not "
+                             f"refresh the unsuffixed key."))
+    return rows
+
+
+def _citations(paths: list[Path]) -> tuple[dict[tuple[str, str, str], list[str]],
+                                           list[str]]:
+    """(ref, hash, rev) -> the documents carrying it.
+
+    Deduplicated because resolving is a subprocess and r8 alone cites
+    `verify_drag_ladder.py` three times; the count is kept because "which
+    documents does this dead rev reach" is the first question after a failure.
+    """
+    out: dict[tuple[str, str, str], list[str]] = {}
+    unread: list[str] = []
+    for path in paths:
+        text = path.read_text()
+        if path.suffix == ".md":
+            if not text.startswith("---\n"):
+                unread.append(f"{path.name}: no frontmatter")
+                continue
+            end = text.find("\n---", 4)
+            try:
+                import yaml
+                doc = yaml.safe_load(text[4:end])
+            except Exception as e:
+                # Without PyYAML every `.md` citation vanishes from the run and
+                # the summary still reads clean -- one of this repository's two
+                # named patterns, in its own new code. Say which documents.
+                unread.append(f"{path.name}: {e.__class__.__name__}")
+                continue
+        else:
+            try:
+                doc = json.loads(text)
+            except json.JSONDecodeError as e:
+                unread.append(f"{path.name}: {e}")
+                continue
+        where = (path.relative_to(ROOT).as_posix()
+                 if path.is_relative_to(ROOT) else path.name)
+
+        def walk(node) -> None:
+            if isinstance(node, dict):
+                ref, h = node.get("ref"), node.get("hash")
+                if isinstance(ref, str) and isinstance(h, str):
+                    out.setdefault((ref, h, str(node.get("rev") or "")), []).append(where)
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        walk(doc)
+    return out, unread
+
+
+def resolve_citations(paths: list[Path], roots: dict[str, Path],
+                      subject: dict[str, str] | None = None) -> list[tuple]:
+    """Each distinct citation against the blob at the revision it names.
+
+    This is the half that verifies *history*. The working-tree pass above can
+    only ever speak about the tip, and a bridge document is frozen by design --
+    so without this, every sealed citation in the repository is unverifiable the
+    moment its file is touched upstream.
+    """
+    rows = []
+    cites, unread = _citations(paths)
+    for name in unread:
+        rows.append((name, "unread", "this document contributed no citations"))
+    for (ref, cited, rev), docs in sorted(cites.items()):
+        # The cited hash is part of the identity, not decoration: two documents
+        # may cite one path at one rev and disagree about what is there, which
+        # is the whole point. The selftest caught this line without it -- two
+        # cases collapsed onto one key and the passing one overwrote the
+        # failing one, which is a fixture reporting on the wrong row.
+        seen = (f"{ref} @{rev or '-'} cites {cited}"
+                f"  [{docs[0]}{f' +{len(docs) - 1}' if len(docs) > 1 else ''}]")
+        if not rev:
+            rows.append((seen, "no_rev", "the schema calls `rev` strongly wanted; "
+                                         "this is what it buys"))
+            continue
+        target = (subject or {}).get(ref.split("@")[0], ref)
+        if target != ref:
+            seen += f"  (by `_subject_of` -> {target})"
+        root, rel = _route(target, roots)
+        if root is None:
+            rows.append((seen, "no_root", f"{target.split(':')[0]}: has no checkout"))
+            continue
+        status, blob = _git_blob(root, rev, rel)
+        if status != "ok_rev":
+            rows.append((seen, status, f"git -C {root} cat-file -t {rev}:{rel}"))
+            continue
+        found = _sha16(blob)
+        if found == cited:
+            rows.append((seen, "ok_rev", f"{cited} confirmed at {rev}"))
+        else:
+            rows.append((seen, "rev_mismatch",
+                         f"document cites {cited}, blob at {rev} is {found}"))
+    return rows
+
+
 def _r6_branch_checks() -> list[str]:
     """R6 has four branches and three of them fire nowhere in the live thread.
 
@@ -914,6 +1137,17 @@ def selftest() -> int:
     else:
         print("ok    R6 branch checks  (5 cases: unsuffixed, suffixed, none, "
               "placeholder, unregistered)")
+    resolve_failures = _resolve_checks()
+    if resolve_failures:
+        bad += 1
+        print("BAD   R6 resolve branch:")
+        for f in resolve_failures:
+            print(f"          {f}")
+    else:
+        print(f"ok    R6 resolve branch  ({len(RESOLVE_STATUSES)} statuses, each "
+              "exercised against a temporary git repo; the real roots need "
+              "--resolve and are NOT checked here)")
+
     _RATIONALES_SEEN.clear()
     mf = ROOT / "hashes.json"
     manifest = json.loads(mf.read_text()) if mf.exists() else None
@@ -986,6 +1220,175 @@ def selftest() -> int:
     return 1 if bad else 0
 
 
+def _resolve_checks() -> list[str]:
+    """The resolve branch, against a git repository built three lines from here.
+
+    The roots it exists for are two clones this repository does not have and CI
+    will never have, so without this the whole mode is a script somebody has to
+    remember to run -- the failure the `.github` directory was added to stop.
+    Every status in RESOLVE_STATUSES must be produced by a case here: a new
+    branch cannot arrive unexercised, which is `_coverage_checks` applied to a
+    rule whose input is a filesystem rather than a document.
+    """
+    import tempfile
+
+    tmp = Path(tempfile.mkdtemp(prefix="bridge-resolve-"))
+    am = tmp / "am"
+    (am / "kb").mkdir(parents=True)
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", "-C", str(am), "-c", "user.name=selftest",
+             "-c", "user.email=selftest@example.invalid", *args],
+            capture_output=True)
+
+    if git("init", "-q").returncode != 0:
+        return ["resolve: `git init` failed, so the rev branches were not "
+                "exercised. That is a skipped rule, not a passed one."]
+
+    (am / "kb/thing.md").write_text("v1")
+    git("add", "-A")
+    git("commit", "-qm", "one")
+    rev1 = git("rev-parse", "--short", "HEAD").stdout.decode().strip()
+    (am / "kb/thing.md").write_text("v2")
+    (am / "kb/later.md").write_text("new")
+    git("add", "-A")
+    git("commit", "-qm", "two")
+    (am / "kb/dir").mkdir()
+    roots = {"am": am}  # `bd` deliberately absent: that is the no_root case.
+
+    h1, h2 = _sha16(b"v1"), _sha16(b"v2")
+    manifest = {
+        "_subject_of": {"am:kb/proxy.md": "am:kb/thing.md"},
+        "am:kb/thing.md": h1, "am:kb/thing.md@r2": h2,  # a later rev matches
+        "am:kb/proxy.md": h2,                           # resolves via subject
+        "am:kb/later.md": "sha256:2222222222222222",    # exists, matches none
+        "am:kb/gone.md": "sha256:0000000000000000",     # path not there at all
+        "am:kb/dir": "sha256:1111111111111111",
+        "bd:anything.py": "sha256:3333333333333333",
+    }
+    want_manifest = {
+        "am:kb/thing.md": "ok_worktree", "am:kb/proxy.md": "ok_worktree",
+        "am:kb/later.md": "advanced", "am:kb/gone.md": "absent",
+        "am:kb/dir": "no_recipe", "bd:anything.py": "no_root",
+    }
+
+    doc = [
+        {"ref": "am:kb/thing.md", "hash": h1, "rev": rev1},        # ok_rev
+        {"ref": "am:kb/thing.md", "hash": h2, "rev": rev1},        # rev_mismatch
+        {"ref": "am:kb/thing.md", "hash": h1, "rev": "dead1beef"},  # rev_missing
+        {"ref": "am:kb/later.md", "hash": _sha16(b"new"), "rev": rev1},  # rev_absent
+        {"ref": "am:kb/thing.md", "hash": h1},                     # no_rev
+        {"ref": "bd:anything.py", "hash": h1, "rev": rev1},        # no_root
+        # The three cases the first real run produced as false defects, before
+        # they were understood as the resolver's own. Each one is cheaper to
+        # keep than to rediscover: they cost an hour of triage against real
+        # documents that turned out to be fine.
+        {"ref": "am:kb/thing.md@r2", "hash": h1, "rev": rev1},     # key suffix
+        {"ref": "am:kb/proxy.md", "hash": h1, "rev": rev1},        # redirected
+        {"ref": "am:kb", "hash": h1, "rev": rev1},                 # a tree
+    ]
+    docfile = tmp / "doc.json"
+    docfile.write_text(json.dumps(doc))
+    broken = tmp / "broken.json"
+    broken.write_text("{not json")
+    want_cites = {
+        ("am:kb/thing.md", h1, rev1): "ok_rev",
+        ("am:kb/thing.md", h2, rev1): "rev_mismatch",
+        ("am:kb/thing.md", h1, "dead1beef"): "rev_missing",
+        ("am:kb/later.md", _sha16(b"new"), rev1): "rev_absent",
+        ("am:kb/thing.md", h1, ""): "no_rev",
+        ("bd:anything.py", h1, rev1): "no_root",
+        ("am:kb/thing.md@r2", h1, rev1): "ok_rev",
+        ("am:kb/proxy.md", h1, rev1): "ok_rev",
+        ("am:kb", h1, rev1): "no_recipe",
+    }
+
+    failures, seen = [], set()
+    manifest_rows = resolve_manifest(manifest, roots)
+    got_manifest = {ref: status for ref, status, _ in manifest_rows}
+    for ref, want in want_manifest.items():
+        seen.add(want)
+        if got_manifest.get(ref) != want:
+            failures.append(f"resolve/manifest {ref}: expected {want}, "
+                            f"got {got_manifest.get(ref)}")
+    subject_row = [d for r, _, d in manifest_rows if r == "am:kb/proxy.md"]
+    if not subject_row or "_subject_of" not in subject_row[0]:
+        failures.append("resolve/manifest: a redirected key does not say so in "
+                        "its detail, so the reader cannot tell which file was read")
+
+    rows = resolve_citations([docfile, broken], roots, manifest["_subject_of"])
+    if not any(st == "unread" and "broken.json" in what for what, st, _ in rows):
+        failures.append("resolve/citation: an unparseable document contributed "
+                        "nothing and the run did not say so")
+    seen.add("unread")
+    got_cites = {}
+    for seen_str, status, _ in rows:
+        got_cites[seen_str.split("  [")[0]] = status
+    for (ref, cited, rev), want in want_cites.items():
+        seen.add(want)
+        key = f"{ref} @{rev or '-'} cites {cited}"
+        if got_cites.get(key) != want:
+            failures.append(f"resolve/citation {key}: expected {want}, "
+                            f"got {got_cites.get(key)}")
+
+    unexercised = set(RESOLVE_STATUSES) - seen
+    if unexercised:
+        failures.append(f"resolve: {', '.join(sorted(unexercised))} can be "
+                        "reported and no case produces it")
+    shutil.rmtree(tmp, ignore_errors=True)
+    return failures
+
+
+def run_resolve(roots: dict[str, Path]) -> int:
+    """`--resolve`. Opt-in, and it says what it did not check.
+
+    It cannot run in CI: resolving `am:` and `bd:` needs the two agent
+    repositories, and pointing CI at their default branches would be worse than
+    not running it -- this thread's AM half lives on a worktree branch that is
+    on neither `main` nor `version2`, so a green tick from `main` would mean
+    'nine refs are missing' or 'nine refs are fine' depending on nothing.
+    """
+    manifest_path = ROOT / "hashes.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    docs = sorted(ROOT.glob("threads/**/ask_*.json")) + \
+        sorted(ROOT.glob("threads/**/kb_entry_for_*.md"))
+
+    print(f"resolve: bridge={ROOT}")
+    for side in ("am", "bd"):
+        print(f"         {side}={roots.get(side) or '(not configured -- not checked)'}")
+
+    subject = manifest.get("_subject_of", {})
+    rows = ([("manifest", *r) for r in resolve_manifest(manifest, roots)] +
+            [("citation", *r) for r in resolve_citations(docs, roots, subject)])
+    counts: dict[str, int] = {}
+    for _kind, _what, status, _detail in rows:
+        counts[status] = counts.get(status, 0) + 1
+
+    for kind, what, status, detail in rows:
+        # `_subject_of` rows print even when they pass. A declared exception
+        # that goes quiet is how the prose note it replaces got forgotten.
+        if status.startswith("ok_") and "_subject_of" not in f"{what}{detail}":
+            continue
+        mark = "ERROR   " if status in RESOLVE_ERRORS else \
+               "warning " if status in RESOLVE_WARNINGS else "        "
+        print(f"    {mark} {status:<12} {kind} {what}\n                          {detail}")
+
+    print()
+    for status, n in sorted(counts.items()):
+        print(f"    {n:>3}  {status:<12} {RESOLVE_STATUSES[status]}")
+
+    checked = sum(n for s, n in counts.items() if s not in ("no_root", "no_rev"))
+    errors = sum(n for s, n in counts.items() if s in RESOLVE_ERRORS)
+    if not checked:
+        print("\nresolve: nothing was resolved. Configure --root am=PATH "
+              "--root bd=PATH (or BRIDGE_ROOT_AM / BRIDGE_ROOT_BD); a run that "
+              "checks nothing is not a run that passed.")
+        return 1
+    print(f"\nresolve: {checked} resolved, {errors} unresolvable")
+    return 1 if errors else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("paths", nargs="*", type=Path)
@@ -995,7 +1398,32 @@ def main() -> int:
                     help="threads/ must pass and every fixtures/invalid/ file "
                          "must fail with the rule its filename names. This is "
                          "the CI entry point: exit 0 means the rules still bite.")
+    ap.add_argument("--resolve", action="store_true",
+                    help="R6's resolve branch: open every registered revision "
+                         "and every cited `rev` in the checkout that owns it. "
+                         "Needs --root; not in CI, which has neither clone.")
+    ap.add_argument("--root", action="append", default=[], metavar="side=PATH",
+                    help="am=PATH or bd=PATH, repeatable. Also read from "
+                         "BRIDGE_ROOT_AM / BRIDGE_ROOT_BD. Never defaulted to a "
+                         "sibling directory: the answer must not depend on "
+                         "where somebody cloned.")
     args = ap.parse_args()
+
+    if args.resolve:
+        roots: dict[str, Path] = {}
+        for side in ("am", "bd"):
+            env = os.environ.get(f"BRIDGE_ROOT_{side.upper()}")
+            if env:
+                roots[side] = Path(env).expanduser().resolve()
+        for spec in args.root:
+            side, _, where = spec.partition("=")
+            if side not in ("am", "bd") or not where:
+                ap.error(f"--root {spec!r}: expected am=PATH or bd=PATH")
+            roots[side] = Path(where).expanduser().resolve()
+        for side, where in roots.items():
+            if not where.is_dir():
+                ap.error(f"--root {side}={where}: not a directory")
+        return run_resolve(roots)
 
     paths = list(args.paths)
     if args.all or not paths:

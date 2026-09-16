@@ -36,8 +36,16 @@ jobs:
 #   red without any commit here. That is deliberate: a pin would hide the
 #   change until somebody bumped it.
 # * **Nothing about the two agent repositories.** Refs beginning `am:` and
-#   `bd:` are verified against `hashes.json` only -- R6 checks a recorded hash,
-#   never a file on disk. A `rev` pointing at nothing is invisible here, which
-#   is the fifth entry in the README's pattern table and remains unfixed on
-#   purpose: the check would have to couple this repository to two external
-#   layouts.
+#   `bd:` are verified against `hashes.json` only. R6's `--resolve` branch does
+#   open the files now, and it is NOT run here: it needs checkouts of both
+#   agent repositories, and pointing this job at their default branches would
+#   be worse than not running it -- this thread's AM half lives on a worktree
+#   branch that is on neither `main` nor `version2`, so a green tick would mean
+#   "nine refs missing" or "nine refs fine" depending on nothing.
+#   What COULD run here with no configuration is the rootless half:
+#   `python3 validate.py --resolve` resolves every `<side>:bridge/...` ref
+#   against this checkout -- 11 of them, including one of the two real findings
+#   the branch turned up (r4 cites r2 at a rev where the blob is a different
+#   hash). It is left unwired deliberately and visibly: wiring it turns this
+#   job red until the owning side corrects a sealed document, and that is the
+#   owner's decision, not this file's. One line when they take it.
