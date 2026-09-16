@@ -846,9 +846,14 @@ def selftest() -> int:
             for e in rep.errors:
                 print(f"          {e}")
 
-    for p in sorted(ROOT.glob("fixtures/invalid/*.json")):
-        want = p.name.split("-")[0].upper()          # 'r5-circular...' -> 'R5'
-        rep = validate(p, manifest)
+    md_fixtures = [p for p in sorted(ROOT.glob("fixtures/invalid/**/*.md"))
+                   if p.name != "README.md"]
+    for p in sorted(ROOT.glob("fixtures/invalid/*.json")) + md_fixtures:
+        # 'r5-circular....json' -> 'R5'; nested md fixtures take the rule from
+        # the top-level directory under fixtures/invalid/.
+        rel = p.relative_to(ROOT / "fixtures/invalid")
+        want = rel.parts[0].split("-")[0].upper()
+        rep = (validate_kb_entry if p.suffix == ".md" else validate)(p, manifest)
         hit = [e for e in rep.errors if e.startswith(want)]
         others = [e for e in rep.errors if not e.startswith(want)]
         if hit and not others:
