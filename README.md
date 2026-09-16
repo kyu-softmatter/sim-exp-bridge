@@ -710,6 +710,42 @@ to notice:
 
 So: **discovery needs a reader; coverage does not.**
 
+### Why two agents found more than one would
+
+Not because either was sharper. **A shape crosses between repositories and a
+surface does not.** Each of the findings above happened because one side handed
+over a form and the other applied it to a surface the giver could not see:
+
+- the coverage audit here produced R0/R1/R9/R10 → BD ran the same enumeration on
+  `bdbot` and got 88 of 154
+- measuring the warning volume here → BD measured its own and found
+  "1 passed, 1 skipped, exit 0"
+- naming rule-level-versus-branch-level here → BD found two branches of
+  `Guard.check` colliding on the raising line's source text
+
+BD's own narrowing of the claim is the transferable part, and it is smaller than
+the credit: **it was willing to run the thing on itself immediately, and three
+times the answer was worse than it expected.** That is cheap, and it is the only
+reason those surfaces were looked at. The rule made them findable; running it
+unprompted is what found them.
+
+### Open, and not to be mistaken for done
+
+Recorded as trades rather than as claims, at BD's request:
+
+- **26 of the 38 unfired gate paths in `bdbot` are still unobserved**, classified
+  `known_unobserved` rather than exercised. 12 of 38 wired beats 38 of 38 in a
+  script nobody runs, which was the previous state — but it is a trade and
+  stating the 26 is what keeps it one.
+- **BD's inventory guarantees classification, not exercise.** It has no
+  CI-enforced negative fixture per rule the way `fixtures/invalid/` here does: a
+  new gate cannot arrive *unclassified*, but it can arrive *unexercised*. That
+  is a weaker guarantee than this repository's, and "source-derived check" reads
+  like parity when it is not.
+- **Here: a `rev` is never resolved.** R6 checks a recorded hash and never a file
+  on disk, so a `rev` pointing at nothing is invisible. One instance, so no rule;
+  see Pattern 1 row 5.
+
 ### And the gate was not pointed at the thing it was built for
 
 Both sides, different failures, same consequence.
