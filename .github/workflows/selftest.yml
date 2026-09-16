@@ -1,0 +1,24 @@
+# The bridge's own unwired-checker instance: `--selftest` existed for days and
+# nothing ran it. It was a script somebody had to remember -- the same shape as
+# BD's verify_gates_actually_fire.py, which required a manual traced pytest run
+# before it meant anything. A checker nobody runs is a checker that does not
+# exist, and this repository had spent several commits saying so.
+name: selftest
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Deliberately pinned to the imports --selftest treats as mandatory.
+      # Their absence is an error under --selftest, not a skip, so a missing
+      # dependency here fails the job rather than quietly disabling R1.
+      - run: pip install jsonschema referencing PyYAML
+      - run: python3 validate.py --selftest

@@ -807,7 +807,37 @@ def selftest() -> int:
     expected = {k: v for k, v in json.loads(exp_file.read_text()).items()
                 if not k.startswith("_")} if exp_file.exists() else {}
 
+    # Clause 3 applied to the enumeration itself, not only to the rules. BD
+    # added the same meta-test and it rejected a 6-character fragment on its
+    # first run. A fixture with no pinned fragment used to pass with a note;
+    # that is a hole, since a new fixture would inherit the pass.
+    MIN_FRAGMENT = 8
+    fixture_names = {p.name for p in (ROOT / "fixtures/invalid").glob("*.json")
+                     if p.name != "expected.json"}
+    fixture_names |= {p.name for p in (ROOT / "fixtures/invalid").iterdir()
+                      if p.is_dir()}
+    meta: list[str] = []
+    for name in sorted(fixture_names):
+        frag = expected.get(name)
+        if frag is None:
+            meta.append(f"{name} pins no failure identity in expected.json")
+        elif len(frag) < MIN_FRAGMENT:
+            meta.append(f"{name} pins {frag!r}, {len(frag)} chars -- under "
+                        f"{MIN_FRAGMENT}, so it may match a sibling branch")
+    for name in sorted(expected):
+        if name not in fixture_names:
+            meta.append(f"expected.json names {name}, which is not a fixture")
+
     bad = 0
+    if meta:
+        bad += 1
+        print("BAD   expected.json meta-checks:")
+        for m in meta:
+            print(f"          {m}")
+    else:
+        print(f"ok    expected.json  ({len(fixture_names)} fixtures, all pinned, "
+              f"all >= {MIN_FRAGMENT} chars)")
+
     branch_failures = _r6_branch_checks()
     if branch_failures:
         bad += 1
@@ -870,7 +900,7 @@ def selftest() -> int:
         rep = (validate_kb_entry if p.suffix == ".md" else validate)(p, manifest)
         hit = [e for e in rep.errors if e.startswith(want)]
         others = [e for e in rep.errors if not e.startswith(want)]
-        frag = expected.get(rel.parts[0], expected.get(str(rel)))
+        frag = expected.get(rel.parts[0], expected.get(rel.name))
         identity = frag is None or any(frag in e for e in hit)
         if hit and not others and identity:
             tail = f" ({frag!r})" if frag else "  [no identity pinned]"

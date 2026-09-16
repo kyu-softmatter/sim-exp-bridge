@@ -1,7 +1,7 @@
 {
   "_comment": "The identity of each fixture's failure, not merely that one occurred. BD's harness printed '12 fired, 0 did NOT' while 7 of the 12 were TypeError from its own wrong call signatures -- a checker passing for the wrong reason, inside the script written to find checkers that pass for the wrong reason. This file closes the same hole here one level finer: --selftest already required the right RULE, and a rule with four branches (R6) could have drifted to the wrong branch and still passed. Each value is a substring that must appear in the matching error.",
   "r0-not-json.json": "not JSON",
-  "r1-direction-const.json": "direction:",
+  "r1-direction-const.json": "'experiment_to_simulation' was expected",
   "r2-unparseable-unit.json": "is not <token>",
   "r3-composite-in-primitives.json": "carries the composite",
   "r4-unknown-assumption-not-draft.json": "assumption(s) are still unknown",
