@@ -121,6 +121,40 @@ Two properties matter more than the file format:
   citation. Both repositories already have supersession machinery
   (`superseded_by` / `corrected_by`); use it.
 
+## 공유 클론 위생 — 세 가지
+
+세 세션이 한 클론을 쓴다. 모든 커밋의 git author 가 같은 사람이므로 **이력만으로는
+어느 쪽이 썼는지 구분되지 않는다.** 라운드 기록의 저자가 모호해지면 소유권 표가
+사후적으로 검증 불가능해진다.
+
+1. **`git commit -am` 을 쓰지 않는다.** 상대가 스테이징해 둔 미완성 작업이 같이
+   올라간다. `git commit --only <경로>` 로 자기 경로만 커밋한다. 실제로 발생했다:
+   `hashes.json` 과 `r5/kb_entry_for_am.md` 가 AM 에 의해 스테이징된 상태에서 브리지
+   소유자가 커밋하려던 순간.
+2. **상대의 untracked 파일은 방해가 되더라도 건드리지 않는다.** `git add -A` 가
+   쓸어담는다. 실제로 발생했다: `84b1530` 이 AM 의 `r4/kb_entry_for_am.md` 를 함께
+   커밋했다 — 내용은 동일해서 잃은 것은 없었지만, 그 라운드 기록의 저자가 모호해졌다.
+3. **커밋 메시지에 어느 쪽인지 적는다.** author 로는 구분되지 않으므로 트레일러로
+   남긴다:
+
+       Bridge-Session: am | bd | owner
+
+`--selftest` 는 이것을 검사하지 않는다. 검사할 수 있는 성질이 아니고, 규약으로 두는
+것이 맞다.
+
+## R5 의 soft 경고가 값을 했다 — 기록
+
+r2 의 `sigma_gamma_per_rung <= 3 %` 는 AM 자신의 400회 numpy 추정치가 되돌아온
+것이어서 R5 가 경고를 냈고, `hard: false` + `gaps[]` 공개라서 통과했다. **네 라운드 뒤에
+그 숫자가 이 실험의 주 경로 전체를 받치고 있다는 것이 드러났다** — r5 의 29.1 % 는
+교차검증 경로이고, plan 의 주 경로는 drag slope `alpha = gamma*v/x_eq` 인데 그 rung 당
+정밀도는 **양쪽 누구도 측정한 적이 없다.** 오차 예산이 기대고 있는 ~3 % 가 바로 그
+미검증 numpy 값이다.
+
+즉 R5 가 지목한 것은 사소한 라벨 문제가 아니라 **스레드에서 가장 중요한 미검증
+숫자**였다. 에러로 막지 않고 경고로 남긴 판단은 유효했다(그 문서는 틀리지 않았다).
+경고를 지우지 않고 `gaps[]` 에 공개로 남겨둔 것이 4라운드 뒤에 값을 했다.
+
 ## R11 — 라운드를 건너 드리프트한 복사본
 
 이 스레드가 실제로 낳은 결함 두 개는 서로 다른 사고가 아니라 **한 가지 형태**다.
