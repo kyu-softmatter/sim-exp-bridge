@@ -303,7 +303,7 @@
       }
     },
     "status": {
-      "description": "draft = an assumption is still `unknown`. blocked = evidence missing. unrunnable = capability missing (BD has no runner for the card / AM has no registered bead of that size).",
+      "description": "draft = an assumption is still `unknown`. blocked = evidence missing. unrunnable = capability missing (BD has no runner for the card / AM has no registered bead of that size). corrected = a later document of the same side has found a value here wrong; supersedes_prior = this document IS that correction.",
       "enum": [
         "draft",
         "open",
@@ -311,7 +311,9 @@
         "answered_with_gaps",
         "blocked",
         "unrunnable",
-        "abandoned"
+        "abandoned",
+        "corrected",
+        "supersedes_prior"
       ]
     },
     "answering_quantity": {

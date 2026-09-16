@@ -121,6 +121,20 @@ Two properties matter more than the file format:
   citation. Both repositories already have supersession machinery
   (`superseded_by` / `corrected_by`); use it.
 
+## 정정은 순번을 따르지 않는다
+
+라운드 순번(홀수 = 실험, 짝수 = 시뮬)은 **새 질문**에만 적용된다. 자기가 앞서 낸
+답이 틀렸다는 걸 발견한 쪽은 순번을 기다리지 않고 말한다 — 그걸 말할 수 있는 쪽은
+그 한 쪽뿐이다. `corrects[]`를 싣고 `status: supersedes_prior`로 보내며, 정정된
+문서는 `status: corrected`가 된다.
+
+`corrects[].downstream`은 비워두지 않는다. **의존물을 지목하지 않는 정정은 그것들을
+조용히 틀린 상태로 남긴다.** 2026-09-15에 실제로 일어난 일이 그 형태였다: BD가 r2의
++1.17 %가 물리가 아니라 추정기 편향이라는 것을 찾았고, r2의 `T_obs >= 32.3 s`
+요구사항은 *그 1.17 %가 `T_obs/tau_k = 2000`에서 측정됐다는 근거로* 존재했다. 편향은
+`T_obs`로 줄지 않으므로 그 요구사항의 근거가 사라졌는데, 같은 시각 AM은 이미 r3를
+그 위에 쓰고 있었다.
+
 ## 리비전 없는 ref는 ref가 아니다
 
 `ref`에 `rev`(커밋 sha, 없으면 브랜치명)를 같이 싣는다. 경로만 있는 참조는 브랜치마다

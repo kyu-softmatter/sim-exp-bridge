@@ -5,92 +5,233 @@
   "description": "BD owns both conversions, so what crosses is ALREADY dimensional: `requirements` are SI ranges AM's gates check directly. `regime` travels alongside for human audit only.",
   "type": "object",
   "required": [
-    "schema", "direction", "origin", "thread", "status", "run_ref",
-    "claim", "answering_quantity", "achieved_precision",
-    "requirements", "regime", "assumptions", "parsed_back", "confirmed_by"
+    "schema",
+    "direction",
+    "origin",
+    "thread",
+    "status",
+    "run_ref",
+    "claim",
+    "answering_quantity",
+    "achieved_precision",
+    "requirements",
+    "regime",
+    "assumptions",
+    "parsed_back",
+    "confirmed_by"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema":    { "const": "softmatter.ask_experiment/0.1" },
-    "direction": { "const": "simulation_to_experiment" },
-    "origin":    { "const": "bd" },
-    "thread":    { "$ref": "common.defs.json#/$defs/thread" },
-    "status":    { "$ref": "common.defs.json#/$defs/status" },
-
+    "schema": {
+      "const": "softmatter.ask_experiment/0.1"
+    },
+    "direction": {
+      "const": "simulation_to_experiment"
+    },
+    "origin": {
+      "const": "bd"
+    },
+    "thread": {
+      "$ref": "common.defs.json#/$defs/thread"
+    },
+    "status": {
+      "$ref": "common.defs.json#/$defs/status"
+    },
     "run_ref": {
-      "allOf": [{ "$ref": "common.defs.json#/$defs/ref" }],
+      "allOf": [
+        {
+          "$ref": "common.defs.json#/$defs/ref"
+        }
+      ],
       "description": "runs/<run_id> this is built from. Hash covers metrics.json."
     },
-
-    "claim": { "type": "string", "minLength": 20 },
-    "answering_quantity": { "$ref": "common.defs.json#/$defs/answering_quantity" },
-
+    "claim": {
+      "type": "string",
+      "minLength": 20
+    },
+    "answering_quantity": {
+      "$ref": "common.defs.json#/$defs/answering_quantity"
+    },
     "achieved_precision": {
-      "allOf": [{ "$ref": "common.defs.json#/$defs/precision" }],
+      "allOf": [
+        {
+          "$ref": "common.defs.json#/$defs/precision"
+        }
+      ],
       "description": "What the simulation actually reached, from metrics.json observables[].err_pct. Not the target."
     },
-
     "requirements": {
       "description": "THE payload. Dimensional ranges, in AM's own units. AM never needs to touch a dimensionless number.",
-      "type": "array", "minItems": 1,
-      "items": { "$ref": "common.defs.json#/$defs/requirement" }
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "common.defs.json#/$defs/requirement"
+      }
     },
-
     "regime": {
       "description": "Audit trail for the inverse map above. `counterpart` is AM's value for the same group where BD could compute it from the primitives AM sent.",
-      "type": "array", "minItems": 1,
-      "items": { "$ref": "common.defs.json#/$defs/group" }
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "common.defs.json#/$defs/group"
+      }
     },
-
-    "assumptions": { "type": "array", "minItems": 1,
-                     "items": { "$ref": "common.defs.json#/$defs/assumption" } },
-
+    "assumptions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "common.defs.json#/$defs/assumption"
+      }
+    },
     "parsed_back": {
       "description": "Unit round-trip. BD restates every primitive it parsed, in the unit AM sent it in, plus the composites BD derived. Cannot catch a physics error; catches every um/nm and radius/diameter accident that actually happens.",
       "type": "object",
-      "required": ["received", "derived_here"],
+      "required": [
+        "received",
+        "derived_here"
+      ],
       "additionalProperties": false,
       "properties": {
-        "received":     { "type": "array", "items": { "$ref": "common.defs.json#/$defs/quantity" } },
-        "derived_here": { "type": "array", "items": { "$ref": "common.defs.json#/$defs/quantity" } }
+        "received": {
+          "type": "array",
+          "items": {
+            "$ref": "common.defs.json#/$defs/quantity"
+          }
+        },
+        "derived_here": {
+          "type": "array",
+          "items": {
+            "$ref": "common.defs.json#/$defs/quantity"
+          }
+        }
       }
     },
-
     "gaps": {
       "description": "What this simulation structurally cannot represent. An honest gap is a result; silence here is the failure mode the whole bridge exists to prevent.",
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["what", "why", "consequence"],
+        "required": [
+          "what",
+          "why",
+          "consequence"
+        ],
         "additionalProperties": false,
         "properties": {
-          "what": { "type": "string" },
-          "why":  { "type": "string" },
-          "consequence": { "type": "string" },
-          "would_need":  { "type": "string" }
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          },
+          "consequence": {
+            "type": "string"
+          },
+          "would_need": {
+            "type": "string"
+          }
         }
       }
     },
-
     "findings": {
       "description": "Where AM's own plan and BD's independent derivation disagree. The point of re-running both gates.",
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["what", "am_says", "bd_says", "kind"],
+        "required": [
+          "what",
+          "am_says",
+          "bd_says",
+          "kind"
+        ],
         "additionalProperties": false,
         "properties": {
-          "what":    { "type": "string" },
-          "am_says": { "type": "string" },
-          "bd_says": { "type": "string" },
-          "kind":    { "enum": ["convention_mismatch", "assumption_mismatch", "numerical_disagreement", "gap"] },
-          "resolution_owner": { "enum": ["am", "bd", "human"] }
+          "what": {
+            "type": "string"
+          },
+          "am_says": {
+            "type": "string"
+          },
+          "bd_says": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "convention_mismatch",
+              "assumption_mismatch",
+              "numerical_disagreement",
+              "gap"
+            ]
+          },
+          "resolution_owner": {
+            "enum": [
+              "am",
+              "bd",
+              "human"
+            ]
+          }
         }
       }
     },
-
-    "out_of_scope":  { "type": "array", "items": { "type": "string" } },
-    "derived_from":  { "type": "array", "items": { "$ref": "common.defs.json#/$defs/ref" } },
-    "confirmed_by":  { "$ref": "common.defs.json#/$defs/confirmed_by" }
+    "out_of_scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "derived_from": {
+      "type": "array",
+      "items": {
+        "$ref": "common.defs.json#/$defs/ref"
+      }
+    },
+    "confirmed_by": {
+      "$ref": "common.defs.json#/$defs/confirmed_by"
+    },
+    "corrects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "what",
+          "why"
+        ],
+        "additionalProperties": false,
+        "description": "This document corrects a PREVIOUS round of its own side. It therefore speaks out of turn: round parity (odd = experiment, even = simulation) does not hold for a correction, because the side that discovers its own earlier answer was wrong is the only side that can say so. Observed 2026-09-15: BD found r2's +1.17 % to be an estimator bias rather than physics, while AM was already drafting r3 against it.",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "pattern": "^(am|bd):[^\\s]+$"
+          },
+          "round": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "what": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Which field of the corrected document is wrong."
+          },
+          "why": {
+            "type": "string",
+            "minLength": 20
+          },
+          "was": {
+            "type": "string"
+          },
+          "now": {
+            "type": "string"
+          },
+          "downstream": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Everything that rests on the wrong value and must be revisited. A correction that does not name its dependents leaves them silently wrong."
+          }
+        }
+      }
+    }
   }
 }

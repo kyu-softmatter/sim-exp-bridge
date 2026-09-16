@@ -5,57 +5,148 @@
   "description": "Carries dimensional primitives in the units they were measured in, plus the assumption declaration. It does NOT carry dimensionless groups: AM does not nondimensionalise, BD does (README rule W1).",
   "type": "object",
   "required": [
-    "schema", "direction", "origin", "thread", "status", "plan_ref",
-    "claim", "answering_quantity", "required_precision",
-    "what_would_change_my_mind", "system_primitives", "assumptions", "confirmed_by"
+    "schema",
+    "direction",
+    "origin",
+    "thread",
+    "status",
+    "plan_ref",
+    "claim",
+    "answering_quantity",
+    "required_precision",
+    "what_would_change_my_mind",
+    "system_primitives",
+    "assumptions",
+    "confirmed_by"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema":    { "const": "softmatter.ask_simulation/0.1" },
-    "direction": { "const": "experiment_to_simulation" },
-    "origin":    { "const": "am" },
-    "thread":    { "$ref": "common.defs.json#/$defs/thread" },
-    "status":    { "$ref": "common.defs.json#/$defs/status" },
-
+    "schema": {
+      "const": "softmatter.ask_simulation/0.1"
+    },
+    "direction": {
+      "const": "experiment_to_simulation"
+    },
+    "origin": {
+      "const": "am"
+    },
+    "thread": {
+      "$ref": "common.defs.json#/$defs/thread"
+    },
+    "status": {
+      "$ref": "common.defs.json#/$defs/status"
+    },
     "plan_ref": {
-      "allOf": [{ "$ref": "common.defs.json#/$defs/ref" }],
+      "allOf": [
+        {
+          "$ref": "common.defs.json#/$defs/ref"
+        }
+      ],
       "description": "The local plan this ask was distilled from. The plan itself does not cross."
     },
-
     "claim": {
-      "type": "string", "minLength": 20,
+      "type": "string",
+      "minLength": 20,
       "description": "A falsifiable statement, not a setting. 'objective = 100x' is not a claim."
     },
-
-    "answering_quantity": { "$ref": "common.defs.json#/$defs/answering_quantity" },
-    "required_precision": { "$ref": "common.defs.json#/$defs/precision" },
-    "what_would_change_my_mind": { "type": "string", "minLength": 20 },
-
+    "answering_quantity": {
+      "$ref": "common.defs.json#/$defs/answering_quantity"
+    },
+    "required_precision": {
+      "$ref": "common.defs.json#/$defs/precision"
+    },
+    "what_would_change_my_mind": {
+      "type": "string",
+      "minLength": 20
+    },
     "system_primitives": {
       "description": "Measured/handbook primitives ONLY. Composites (gamma, tau_k, f_c, D, ...) belong in reference_only -- validator rule R3. Rationale: 3*pi*eta*d and 6*pi*eta*a are the same formula, and sending the composite is where the factor-of-2 enters silently (BD intake ambiguity A1).",
-      "type": "array", "minItems": 1,
-      "items": { "$ref": "common.defs.json#/$defs/quantity" }
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "common.defs.json#/$defs/quantity"
+      }
     },
-
     "instrument_envelope": {
       "description": "What the instrument can actually do, as ranges. Lets BD answer 'your camera cannot reach this' instead of proposing something unbuildable.",
       "type": "array",
-      "items": { "$ref": "common.defs.json#/$defs/requirement" }
+      "items": {
+        "$ref": "common.defs.json#/$defs/requirement"
+      }
     },
-
     "assumptions": {
-      "type": "array", "minItems": 1,
-      "items": { "$ref": "common.defs.json#/$defs/assumption" }
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "common.defs.json#/$defs/assumption"
+      }
     },
-
     "reference_only": {
       "description": "NON-BINDING. Numbers AM derived in its own gates. BD must derive its own first and compare afterwards -- order matters, it is what keeps this a signal rather than an anchor.",
       "type": "array",
-      "items": { "$ref": "common.defs.json#/$defs/quantity" }
+      "items": {
+        "$ref": "common.defs.json#/$defs/quantity"
+      }
     },
-
-    "out_of_scope":  { "type": "array", "items": { "type": "string" } },
-    "derived_from":  { "type": "array", "items": { "$ref": "common.defs.json#/$defs/ref" } },
-    "confirmed_by":  { "$ref": "common.defs.json#/$defs/confirmed_by" }
+    "out_of_scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "derived_from": {
+      "type": "array",
+      "items": {
+        "$ref": "common.defs.json#/$defs/ref"
+      }
+    },
+    "confirmed_by": {
+      "$ref": "common.defs.json#/$defs/confirmed_by"
+    },
+    "corrects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "what",
+          "why"
+        ],
+        "additionalProperties": false,
+        "description": "This document corrects a PREVIOUS round of its own side. It therefore speaks out of turn: round parity (odd = experiment, even = simulation) does not hold for a correction, because the side that discovers its own earlier answer was wrong is the only side that can say so. Observed 2026-09-15: BD found r2's +1.17 % to be an estimator bias rather than physics, while AM was already drafting r3 against it.",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "pattern": "^(am|bd):[^\\s]+$"
+          },
+          "round": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "what": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Which field of the corrected document is wrong."
+          },
+          "why": {
+            "type": "string",
+            "minLength": 20
+          },
+          "was": {
+            "type": "string"
+          },
+          "now": {
+            "type": "string"
+          },
+          "downstream": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Everything that rests on the wrong value and must be revisited. A correction that does not name its dependents leaves them silently wrong."
+          }
+        }
+      }
+    }
   }
 }
