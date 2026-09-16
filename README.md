@@ -202,6 +202,14 @@ One question decides which: *does any downstream conclusion change?*
 Both keep the document sealed; they differ only in publication cost. Demanding a
 full `ask_experiment` for a one-token `rev` is a rule that will not be kept.
 
+**The test has since refused something, which is the evidence it is a test.**
+r8 states "7.2 to 9.5 %, which is 1.8× the tolerance" — but a range is not one
+ratio (7.15/4.48 = 1.6, 9.48/4.48 = 2.1, and 1.8 is the middle). Applying the
+question: no downstream conclusion changes, since 1.6 and 2.1 both exceed 1 and
+the conclusion is "outside the tolerance". Citation-apparatus grade, so r8 stays
+sealed and no round is published. A test that only ever says "do more" is not
+deciding anything.
+
 Recorded in the order it was reached, at BD's request: BD edited first, R6 caught
 it, and the repair turned out to be the right remedy. The lesson is not that it
 knew the cheap path — it is that **the cheap path was invisible from where it
@@ -634,6 +642,23 @@ anybody more careful:
 - "the dict compares equal, no hash appears an odd number of times" instead of
   "no values changed" — one is checkable in a command, the other asks for trust
 - `--selftest` refusing to pass on nothing, instead of a reviewer noticing
+
+And the operative half of it: **change the shape so the mistake has nowhere to
+live**, rather than being more careful in the same shape. Three times in one day
+the fix took that form, and each time the alternative was a person promising
+something:
+
+| the fix | the alternative it replaced |
+|---|---|
+| two table rows for two quantities | careful wording keeping them apart on one row |
+| sorting `hashes.json` | agreeing not to append concurrently |
+| `expected.json` pinning a message fragment | trusting that a filename names the branch that fired |
+
+Going to the source rather than the relay is the same discipline applied to a
+conversation, and it is worth noting what that bought: BD reported a wrong ratio
+in the table, and reading r8 instead of the message found that **the quantities
+were crossed** — a different and larger error than the one reported. BD had
+stated its ratio correctly and would not have found that.
 
 ### The general form
 
