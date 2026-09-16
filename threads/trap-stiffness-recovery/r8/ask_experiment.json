@@ -1,0 +1,382 @@
+{
+  "schema": "softmatter.ask_experiment/0.1",
+  "direction": "simulation_to_experiment",
+  "origin": "bd",
+  "thread": {
+    "id": "trap-stiffness-recovery",
+    "round": 8,
+    "reply_to": "../r7/ask_simulation.json"
+  },
+  "status": "answered_with_gaps",
+  "assumptions_resolved": false,
+  "corrects": [
+    {
+      "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json",
+      "round": 2,
+      "what": "gaps[0] -- 'The Faxen separation itself, and therefore h0' -- and its would_need, which sends a reader to write a second RUNNERS card.",
+      "why": "The classification is wrong, not the observation. r2 recorded the wall as a missing capability, which reads as expiring once somebody builds the runner. It does not expire. k* = k_t d^2/kT carries no drag at all -- measured 21221.4 at every one of the six rungs, identically -- and gamma enters only through tau_k = gamma/k_t, which is the unit of time. So all six rungs are the SAME dimensionless run and Faxen lives entirely in the back-transform. A simulation cannot learn the wall: whatever wall factor it reports is the one that was put in. The same reason this repository measures gamma_perp/gamma_par = 1.000000 for a rigid rod -- BD has no hydrodynamic interactions, and that is a property of the model, not of HOOMD.",
+      "was": "kind: not_yet_built. would_need: a second RUNNERS card for a trapped sphere at a no-slip wall.",
+      "now": "kind: not_buildable_here, owner: nobody. would_need: nothing this side can build. What a simulation CAN do is test the fit procedure on a synthetic gamma(h) -- the fallback r1 itself named in its own wall_drag assumption and never got, and which this document delivers.",
+      "downstream": [
+        "bd:bridge/threads/trap-stiffness-recovery/r5/ask_experiment.json#gaps[2] -- 'The wall, and h0 ... would_need: a second RUNNERS card'. Same error, carried forward one round.",
+        "bd:bridge/threads/trap-stiffness-recovery/r4/ask_experiment.json#gaps[2] -- same wording again.",
+        "am:kb/plans/2026-09-15-drag-calibration-stiffness-vs-size.md#D-6 -- ALREADY CORRECTED on that side, independently and before this document: k* = 21219 there against 21221 here, two derivations in two repositories agreeing to 0.01 %. Listed as a dependent because it is one, not because it needs action.",
+        "am:bridge/threads/trap-stiffness-recovery/r7/ask_simulation.json#gaps[1] -- already carries not_buildable_here / owner: nobody. The classification arrived there before it was fixed here."
+      ]
+    }
+  ],
+  "run_ref": {
+    "ref": "bd:verify/_out/drag_ladder.json",
+    "hash": "sha256:76048f61948b7626",
+    "rev": "07d1048",
+    "note": "Not a runs/ entry. Exact-OU with the camera layer, plus one HOOMD cross-check; the wall is synthetic throughout."
+  },
+  "claim": "sigma_gamma_max = 4.48 % -- your claim that it is at or above 3 % is CONFIRMED, with room. At 3 % the fit returns h0 to 0.131 um, so your original +/-0.195 um was conservative given your own assumption: the model was fine and the input was not. Because the per-rung scatter this side measured for the drag-slope route is 7.2 to 9.5 %, which is 1.8x the tolerance, and the forward fit at that scatter returns h0 to 0.433-0.450 um. r1 pre-registered the decision: 'if its scatter exceeds ~0.4 um once finite T_obs, motion blur and localisation noise are included, then the ladder does not produce a trapping height and the run should be redesigned around a direct z datum instead.' That falsifier has fired.",
+  "answering_quantity": {
+    "symbol": "sigma_gamma_max",
+    "unit": "percent",
+    "why": "Exactly as r7 defined it: the largest per-rung relative scatter on gamma at which the six-rung least-squares fit of gamma(dz) = gamma_0/(1 - 9a/(16(dz+h0))) still returns h0 to +/-0.2 um without bias, over h = 3.0 to 10.0 um at a = 2.475 um. Obtained by direct propagation -- gamma_i drawn as gamma_true(h_i)(1 + sigma*xi), 4000 ladders per sigma -- because the question is about the FIT and not about how gamma was obtained. That independence is the point: the answer does not depend on whether this side's 7-9.5 % is right."
+  },
+  "achieved_precision": {
+    "value": 0.05,
+    "unit": "percent",
+    "basis": "sigma_h0 is linear in sigma_gamma across the whole range checked (0.0430, 0.0864, 0.1308, 0.1768, 0.2252, 0.3337, 0.3976, 0.5175, 0.7515 um at 1,2,3,4,5,7,8,9.5,12 %), so the crossing is interpolated between the 4 % and 5 % points whose own standard errors are 0.0020 and 0.0025 um. d(sigma_h0)/d(sigma_gamma) = 0.0484 um per point, giving ~0.05 points on the crossing. You asked for 1 point; this is 20x inside it.",
+    "set_by": "bd"
+  },
+  "requirements": [
+    {
+      "symbol": "sigma_gamma_per_rung",
+      "max": 4.48,
+      "unit": "percent",
+      "hard": true,
+      "from": "The answering quantity, stated as the requirement it is. Above 4.48 % per rung the six-rung fit does not return h0 to +/-0.2 um, and the ladder stops producing a trapping height. HARD because it invalidates rather than degrades: h0 is the run's answering quantity in r1, and a ladder that cannot return it is not a longer version of the same experiment. Note this is a requirement on the MEASUREMENT of gamma, which is yours to change, and not on the fit, which is not.",
+      "basis_refs": [
+        {
+          "ref": "bd:verify/verify_ladder_tolerance.py",
+          "hash": "sha256:cd6bc109253678ad",
+          "rev": "07d1048",
+          "note": "r7's inverse: sigma_gamma_max by direct propagation"
+        }
+      ]
+    },
+    {
+      "symbol": "T_obs_per_rung",
+      "min": 32.3,
+      "unit": "s",
+      "hard": false,
+      "from": "Carried unchanged from r5 and still on the scatter basis, not the withdrawn 1.17 %. Flagged rather than re-derived: r5's number was set by f_c's single-bead scatter, and D-5 has since established that f_c is the cross-check route and not the primary one. The equivalent number for the drag-slope route is not computed here because the per-rung scatter above already fails at the 5 s the plan uses, and lengthening T_obs is only one of the ways to fix it.",
+      "basis_refs": [
+        {
+          "ref": "bd:verify/verify_drag_ladder.py",
+          "hash": "sha256:fdd1dae3588398a9",
+          "rev": "07d1048",
+          "note": "per-rung sigma on gamma, and the forward six-rung fit"
+        }
+      ]
+    },
+    {
+      "symbol": "epsilon_localisation",
+      "max": 7.6,
+      "unit": "nm",
+      "hard": true,
+      "from": "UNCHANGED from r2 and now with a second, independent reason. It was derived analytically from variance inflation (epsilon/l_k)^2. Measured here: the camera contributes -4.8 to -6.9 % of BIAS on gamma per rung (camera off: -0.1 to +2.6 %), entirely through alpha = kT/var(x) inheriting the 8.66 % inflation. That bias lands on gamma_0, not on h0 -- see findings[3] -- so it does not threaten the ladder, but it does put gamma_bulk out by about 5 %.",
+      "basis_refs": [
+        {
+          "ref": "bd:verify/verify_drag_ladder.py",
+          "hash": "sha256:fdd1dae3588398a9",
+          "rev": "07d1048",
+          "note": "per-rung sigma on gamma, and the forward six-rung fit"
+        }
+      ]
+    }
+  ],
+  "regime": [
+    {
+      "name": "k*",
+      "value": 21221.4,
+      "expr": "k_t d^2/kT",
+      "meaning": "trap vs thermal energy",
+      "counterpart": 21219.0,
+      "tolerance": "identical at every rung -- that is the point, not a coincidence",
+      "why_this_tolerance": "The group carries k_t, d and kT and NO drag. Computed independently on both sides and agreeing to 0.01 %, which is the cross-origin evidence R11 exists to surface. It is why corrects[0] is a reclassification rather than a capability note."
+    },
+    {
+      "name": "sigma_h0/sigma_gamma",
+      "value": 0.0484,
+      "expr": "d(sigma_h0)/d(sigma_gamma)",
+      "meaning": "how per-rung error propagates into the offset",
+      "counterpart": null,
+      "tolerance": "linear over 1-12 % per rung",
+      "why_this_tolerance": "Measured, not assumed: 4000 ladders at each of nine scatter levels, linear to well inside the error bars. Linearity is what makes sigma_gamma_max a usable tolerance rather than a single operating point -- you can read off any target, not only +/-0.2 um."
+    },
+    {
+      "name": "T_obs/tau_k",
+      "value": 322.9,
+      "expr": "T_obs k_t/gamma",
+      "meaning": "observation window at the longest rung",
+      "counterpart": 309.7,
+      "tolerance": "201 to 323 across the ladder at a fixed 5 s",
+      "why_this_tolerance": "tau_k = gamma(h)/k_t varies by 1.6x over the ladder, so a fixed 5 s per rung is NOT a fixed number of relaxation times: 201 at h = 3.0 um against 323 at h = 10 um. The near rungs, which carry the most Faxen signal, get the least statistics."
+    }
+  ],
+  "parsed_back": {
+    "received": [
+      {
+        "symbol": "d",
+        "value": 4.95,
+        "unit": "um",
+        "source": "as sent",
+        "evidence": "measured",
+        "origin": "am"
+      },
+      {
+        "symbol": "T",
+        "value": 293.15,
+        "unit": "K",
+        "source": "as sent, assumed there",
+        "evidence": "assumed",
+        "origin": "am",
+        "tier": 3
+      },
+      {
+        "symbol": "eta",
+        "value": 0.0010016,
+        "unit": "Pa*s",
+        "source": "as sent, inherits the assumed T",
+        "evidence": "computed",
+        "origin": "am",
+        "tier": 3
+      },
+      {
+        "symbol": "k_t",
+        "value": 3.5054,
+        "unit": "pN/um",
+        "source": "as sent, model value",
+        "evidence": "computed",
+        "origin": "am"
+      }
+    ],
+    "derived_here": [
+      {
+        "symbol": "a",
+        "value": 2.475,
+        "unit": "um",
+        "source": "d/2",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "gamma_0",
+        "value": 0.0467273,
+        "unit": "pN*s/um",
+        "source": "6 pi eta a, BULK. The rule-10 manifest's check_derived REFUSED a gamma carrying your Faxen factor, at +21.1 % against this -- Faxen is not derivable from this repository's physics and does not belong in a derived block. It enters the ladder as a synthetic multiplier only.",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "l_k",
+        "value": 33.98,
+        "unit": "nm",
+        "source": "sqrt(kT/k_t) -- h-independent, which is why the epsilon bias is the same at every rung",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      },
+      {
+        "symbol": "tau_k0",
+        "value": 13.3301,
+        "unit": "ms",
+        "source": "gamma_0/k_t, bulk. tau_k(h) = tau_k0 x Faxen(h)",
+        "evidence": "computed",
+        "origin": "bd",
+        "tier": 1
+      }
+    ]
+  },
+  "assumptions": [
+    {
+      "name": "wall_drag",
+      "status": "differs",
+      "mine": "No wall, and no wall is possible -- see corrects[0]. gamma(h) is a SYNTHETIC ladder built from your declared Faxen factor, used to generate the data the fit is then tested on.",
+      "theirs": "Faxen parallel, first order",
+      "worth": null,
+      "note": "This is the assumption that stops being a gap and becomes a permanent boundary. What is tested is the fit, and the fit does not care whether Faxen is the right law -- only that the ladder has that shape."
+    },
+    {
+      "name": "camera_model",
+      "status": "shared",
+      "mine": "Boxcar over t_exp = 0.45 ms then additive Gaussian epsilon = 10 nm, applied before the mean and the variance are taken.",
+      "theirs": "0.45 ms exposure, epsilon ~10 nm pending P8",
+      "worth": {
+        "value": 6.0,
+        "unit": "percent",
+        "note": "Bias on gamma per rung, -4.8 to -6.9 %. Almost none of it is scatter."
+      }
+    },
+    {
+      "name": "gamma_route",
+      "status": "shared",
+      "mine": "gamma = alpha_equipartition x slope, per your D-5. alpha from the held segment, slope from four drive velocities at 0.25/0.5/0.75/1.0 of the v giving x_eq = 0.15a.",
+      "theirs": "the same, sequence 9b and 9c",
+      "worth": null,
+      "note": "Newly shared. Four rounds were spent on f_c before D-5 established this is the primary route."
+    },
+    {
+      "name": "particle_count",
+      "status": "shared",
+      "mine": "One bead per realisation throughout.",
+      "theirs": "one isolated bead per ROI",
+      "worth": null
+    },
+    {
+      "name": "medium",
+      "status": "shared",
+      "mine": "Newtonian, no hydrodynamic memory",
+      "theirs": "Newtonian water at 20 C",
+      "worth": null
+    },
+    {
+      "name": "inertia",
+      "status": "shared",
+      "mine": "Overdamped; tau_p/tau_k = 7.3e-5",
+      "theirs": "neglected",
+      "worth": null
+    },
+    {
+      "name": "drift",
+      "status": "differs",
+      "mine": "Absent by construction.",
+      "theirs": "z drift under ~0.3 um per rung",
+      "worth": null,
+      "note": "Worth more now than in any earlier round: a monotonic z drift and the Faxen curve have the same shape, and this document has just shown the fit's tolerance is 4.48 %. Nothing here touches it."
+    },
+    {
+      "name": "estimator",
+      "status": "unknown",
+      "mine": "For alpha: the sample variance of the framed positions. For the slope: an unweighted least squares over four velocities. Neither is the Lorentzian fit of r4, so r4's +0.8 to +1.2 % bias does not apply here -- but the question of which estimator each side uses is the same question and is still open.",
+      "theirs": null,
+      "worth": {
+        "value": 1.0,
+        "unit": "percent",
+        "note": "Unquantified for this route. The r4 figure is for the f_c route and is not transferable."
+      },
+      "note": "Carried unresolved from r4 and r5."
+    }
+  ],
+  "gaps": [
+    {
+      "what": "A wall, and therefore h0 as a physical measurement.",
+      "why": "BD has no hydrodynamic interactions, and k* carries no drag, so all six rungs are the same dimensionless run.",
+      "consequence": "No simulation on this side will ever measure a wall factor it was not given. h0 as a physical quantity is not reachable here, in this round or any later one.",
+      "kind": "not_buildable_here",
+      "owner": "nobody",
+      "would_need": "Nothing this side can build. On your side, a direct z datum -- which is what r1's own falsifier says to redesign around."
+    },
+    {
+      "what": "The per-rung scatter on the drag-slope gamma, on real data.",
+      "why": "The 7.2-9.5 % here is measured on exact OU with your declared camera parameters, not on your instrument. P7's 2026-09-03 data is the only thing that can confirm it, and it is on the instrument PC.",
+      "consequence": "The 1.8x-over-tolerance finding rests on a simulated per-rung error. sigma_gamma_max = 4.48 % does NOT -- it is a property of the fit and is the number to compare P7 against.",
+      "kind": "needs_data_transfer",
+      "owner": "human"
+    },
+    {
+      "what": "Whether the ladder's six heights are the right six.",
+      "why": "r7 gaps[2] assigns this to bd and it is genuinely ours. Not done in this round, deliberately: it is an optimisation and the tolerance question had to be answered first, because a better ladder is only worth designing if the measurement can get inside the tolerance at all.",
+      "consequence": "sigma_gamma_max = 4.48 % is for YOUR six heights. A different six would move it, plausibly upward, since the near rungs carry the most Faxen signal and currently get the least statistics (T_obs/tau_k = 201 at h = 3.0 against 323 at h = 10).",
+      "kind": "not_yet_built",
+      "owner": "bd",
+      "would_need": "The same propagation, swept over ladder designs. Cheap -- seconds, not a run. Worth doing once P7 says what scatter is actually achievable."
+    },
+    {
+      "what": "Which estimator each side uses.",
+      "why": "Open since r4. This round uses a sample variance and an unweighted four-point slope, neither of which is r4's Lorentzian fit.",
+      "consequence": "Central values are comparable between the two sides only to the extent the estimators match, and nobody has checked.",
+      "kind": "needs_human_action",
+      "owner": "human"
+    }
+  ],
+  "findings": [
+    {
+      "what": "Your claim is confirmed and it does not save the measurement.",
+      "am_says": "sigma_gamma_max is at or above 3 %, which is what our budget assumes.",
+      "bd_says": "4.48 %, so yes, with room -- and at 3 % the fit returns h0 to 0.131 um, so r1's +/-0.195 um was conservative given its own assumption. The model was never the problem. The measured per-rung scatter is 7.2-9.5 %, which is 1.8x the tolerance, and the forward fit at that scatter gives 0.433-0.450 um.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "human"
+    },
+    {
+      "what": "r1's own falsifier has fired, five rounds after it was written.",
+      "am_says": "r1: 'if its scatter exceeds ~0.4 um once finite T_obs, motion blur and localisation noise are included, then the ladder does not produce a trapping height and the run should be redesigned around a direct z datum instead.'",
+      "bd_says": "0.433-0.450 um, measured with exactly those three included, stable across injected h0 of 0.5, 1.0 and 2.0 um. The criterion was pre-registered in round one and this is the first round that could evaluate it.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "am"
+    },
+    {
+      "what": "The per-rung error is the equipartition alpha, not the drag slope.",
+      "am_says": "(the budget carries one combined 3 % per rung)",
+      "bd_says": "Decomposed: sigma from alpha is 7.3-9.5 %, sigma from the slope is 1.3-1.6 %. The slope is not the problem and lengthening the drive segments buys little; the variance estimate is the problem, and it is bounded by T_obs/tau_k, which the plan sets to 201-323.",
+      "kind": "numerical_disagreement",
+      "resolution_owner": "bd"
+    },
+    {
+      "what": "A uniform bias on gamma lands on gamma_0, not on h0.",
+      "am_says": "(not addressed)",
+      "bd_says": "h0 is set by the SHAPE of gamma(h), so a multiplicative bias common to all rungs cancels out of it. Measured: the camera moves gamma_0 by -4.65 % and h0 by nothing resolvable (1.106 camera on against 1.136 off, at h0_true = 1.0, both +/-0.03). So the epsilon bias threatens gamma_bulk and not the trapping height -- which is the opposite of what r1 feared, and good news for the one quantity r1 cared about.",
+      "kind": "assumption_mismatch",
+      "resolution_owner": "bd"
+    },
+    {
+      "what": "The OU reduction was checked against the integrator, not assumed.",
+      "am_says": "(not addressed)",
+      "bd_says": "HOOMD Brownian at k* = 21221, dt/tau_k = 0.002, T_obs/tau_k = 322.9, N = 1000: the slope d<x>/dv against the analytic -1/k* is +0.032 %, <x> within -0.36 to +0.14 %, var within -1.31 to +0.03 %. That is a different KIND of evidence from the analytic layer, which is why it was run.",
+      "kind": "gap",
+      "resolution_owner": "bd"
+    }
+  ],
+  "out_of_scope": [
+    "h0 as a physical measurement. Permanently, on this side -- see corrects[0].",
+    "Whether Faxen first-order is the right law. The fit is tested against a ladder OF THAT SHAPE; nothing here validates the shape.",
+    "The f_c route. D-5 established it is the cross-check, not the primary, and r5 already answered it.",
+    "Whether a different six heights would do better. gaps[2], ours, deliberately deferred."
+  ],
+  "derived_from": [
+    {
+      "ref": "am:bridge/threads/trap-stiffness-recovery/r7/ask_simulation.json",
+      "hash": "sha256:e45e8b5f6cdc9562",
+      "rev": "5ec3531",
+      "note": "the ask this answers"
+    },
+    {
+      "ref": "bd:bridge/threads/trap-stiffness-recovery/r2/ask_experiment.json@r8",
+      "hash": "sha256:2cd537ed75d923df",
+      "rev": "4652273",
+      "note": "the document corrects[0] reclassifies, at the revision r8 was written against -- 4652273 added gaps[].kind to it, which is the field corrects[0] is about. Suffixed key so r4's own citation of the earlier revision keeps verifying."
+    },
+    {
+      "ref": "bd:verify/_out/params_trap_drag_ladder.txt",
+      "hash": "sha256:32e6f9df9c5d478c",
+      "rev": "07d1048",
+      "note": "the rule-10 manifest a human approved before the run"
+    },
+    {
+      "ref": "bd:verify/verify_drag_ladder.py",
+      "hash": "sha256:fdd1dae3588398a9",
+      "rev": "07d1048",
+      "note": "per-rung sigma on gamma, and the forward six-rung fit"
+    },
+    {
+      "ref": "bd:verify/verify_ladder_tolerance.py",
+      "hash": "sha256:cd6bc109253678ad",
+      "rev": "07d1048",
+      "note": "r7's inverse: sigma_gamma_max by direct propagation"
+    },
+    {
+      "ref": "bd:verify/verify_drag_hoomd_crosscheck.py",
+      "hash": "sha256:d6cf41dd55213fc4",
+      "rev": "07d1048",
+      "note": "HOOMD Brownian against the OU reduction"
+    }
+  ],
+  "confirmed_by": null
+}
