@@ -629,9 +629,20 @@ def r11_thread(thread_dir: Path, manifest: dict | None) -> Report:
             detail = ", ".join(f"{r}/{o}: {v:g} {u}"
                                for o in sorted(origins)
                                for r, v, u, _ in seen[(symbol, o)])
+            nums = [v for o in origins for _, v, _, _ in seen[(symbol, o)]]
+            units = {u for o in origins for _, _, u, _ in seen[(symbol, o)]}
+            if len(units) > 1:
+                verdict = ("in DIFFERENT UNITS, which the round-trip cannot compare "
+                           "-- convert before reading this as agreement")
+            else:
+                spread = (max(nums) - min(nums)) / (max(abs(v) for v in nums) or 1.0)
+                verdict = ("and they agree exactly" if spread == 0 else
+                           f"and they agree to {spread * 100:.2g} %" if spread <= 0.05
+                           else f"and they DIFFER by {spread * 100:.2g} %, which is "
+                                "large for a round-trip check -- worth reading")
             rep.warn("R11", f"{symbol} is derived independently on both sides "
-                            f"({detail}). Not a defect -- this is the round-trip "
-                            "check, and agreement here is evidence.")
+                            f"({detail}) {verdict}. Not a defect: this is the "
+                            "round-trip check, and this line is its result.")
     return rep
 
 
