@@ -320,8 +320,10 @@ def r8_tier_not_derivable(doc: dict, rep: Report) -> None:
                     rep.warn("R8", f"{where} ({node.get('symbol')}) ships tier "
                                    f"{tier} but evidence: {ev!r} reaches only "
                                    f"{sorted(allowed)} via T1. Ignored -- `evidence` "
-                                   "is authoritative. Drop `tier` rather than "
-                                   "correcting it.")
+                                   "is authoritative. Leave sealed documents alone; "
+                                   "omit `tier` in new ones. This warning standing is "
+                                   "the record that the field was normative when this "
+                                   "document was written.")
             for k, v in node.items():
                 walk(v, f"{where}.{k}")
         elif isinstance(node, list):
@@ -346,7 +348,9 @@ def r12_gap_kind(doc: dict, rep: Report) -> None:
             rep.warn("R12", f"gaps[{i}] ({str(g.get('what'))[:60]!r}) has no `kind`. "
                             "not_yet_built, not_buildable_here, needs_human_action and "
                             "needs_data_transfer are four different instructions to the "
-                            "reader; `would_need` alone does not separate them.")
+                            "reader; `would_need` alone does not separate them. Leave "
+                            "sealed documents alone -- backfilling `kind` into r2 is "
+                            "what caused the R6 cascade. Carry it in new gaps.")
         elif g.get("kind") == "not_buildable_here" and g.get("owner") not in (None, "nobody", "human"):
             rep.warn("R12", f"gaps[{i}] is not_buildable_here but owner is "
                             f"{g.get('owner')!r}. If no work inside the framework helps, "
