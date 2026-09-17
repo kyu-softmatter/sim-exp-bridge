@@ -9,7 +9,7 @@ and a Brownian-dynamics simulator
 — so that each one re-derives its own plan through its own gates instead of
 importing the other's numbers.
 
-Four JSON schemas, a validator with thirteen rules, and one worked eight-round
+Four JSON schemas, a validator with fifteen rules, and one worked nine-round
 thread in which every number is copied from a real artefact in one of the two
 repositories.
 
@@ -121,10 +121,11 @@ and every `system.yaml`, and it would encode "foreign" as a *confidence* level,
 which it is not — an AM measurement is better evidence than most of BD's
 tier 0, not worse.
 
-## The thirteen rules
+## The fifteen rules
 
 Only R1 is a shape rule. The rest are about provenance, which no schema
-expresses. `T1` and the severity order both live in `validate.py` as the single
+expresses. Seventeen rows for fifteen rules: `R5b` is a sub-rule of R5, and R6
+appears twice because its `--resolve` branch is opt-in and cannot run in CI. `T1` and the severity order both live in `validate.py` as the single
 copy.
 
 | | rule | what it prevents |
@@ -1103,11 +1104,11 @@ threads/trap-stiffness-recovery/
   r3 … r8/                      the rest of the thread
 fixtures/invalid/               one per rule, plus expected.json pinning identity
 fixtures/valid/                 regression guards for deliberate loosenings
-proposals/                      schema change requests from either side
+proposals/                      schema change requests; all seven answered
 prompts/                        the request text pasted into each agent session
 hashes.json                     the manifest R6 checks against, and `_subject_of`
 tools/rehash.sh                 what `hashes.json` names: prints lines to add
-validate.py                     the thirteen rules
+validate.py                     the fifteen rules
 ```
 
 Threading is `<thread>/r<N>`, not by title. Titles collide or drift by round 3,
