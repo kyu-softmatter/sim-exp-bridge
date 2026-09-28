@@ -2,6 +2,8 @@
 
 [![selftest](https://github.com/kyu-softmatter/sim-exp-bridge/actions/workflows/selftest.yml/badge.svg)](https://github.com/kyu-softmatter/sim-exp-bridge/actions/workflows/selftest.yml)
 
+> **Rebuild:** this protocol is being rebuilt as [`bridge/`](https://github.com/kyu-softmatter/soft-matter-agents/tree/main/bridge) in [soft-matter-agents](https://github.com/kyu-softmatter/soft-matter-agents), the four-agent system (microscope, simulation, librarian, bridge).
+
 A protocol for handing a **question** between two research agents — an optical
 microscope ([agentic-microscope](https://github.com/kyu-softmatter/agentic-microscope))
 and a Brownian-dynamics simulator
